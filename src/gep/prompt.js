@@ -323,29 +323,24 @@ Deleting, overwriting, or emptying ANY of them is an IMMEDIATE PROTOCOL VIOLATIO
 - memory/persona_*.md
 - memory/personas/**
 
-You MAY append to or edit sections within these files.
+Evolver core source files (DO NOT modify -- managed by deploy pipeline):
+- skills/evolver/src/evolve.js
+- skills/evolver/src/gep/prompt.js
+- skills/evolver/src/gep/signals.js
+- skills/evolver/src/gep/solidify.js
+- skills/evolver/src/gep/selector.js
+- skills/evolver/src/gep/mutation.js
+- skills/evolver/src/gep/personality.js
+- skills/evolver/src/gep/memoryGraph.js
+- skills/evolver/src/gep/paths.js
+- skills/evolver/src/gep/bridge.js
+- skills/evolver/index.js
+- skills/evolver/package.json
+
+You MAY append to or edit sections within identity/memory files listed above.
 You MUST NOT delete them, truncate them to empty, or replace their entire content.
+You MUST NOT modify evolver core source files -- they are deployed from a versioned repo.
 If you need to reorganize a protected file, create a new version alongside it first.
-
-━━━━━━━━━━━━━━━━━━━━━━
-X. Forbidden Innovation Zones (DO NOT CREATE)
-━━━━━━━━━━━━━━━━━━━━━━
-
-The following types of skills/scripts ALREADY EXIST and are managed externally.
-Creating duplicates is a PROTOCOL VIOLATION and they WILL be deleted.
-
-- Evolver loop managers, watchdogs, daemons, cron schedulers
-  (managed by: feishu-evolver-wrapper --loop + Singleton Guard)
-- Skill health monitors / skill auditors
-  (managed by: feishu-evolver-wrapper/skills_monitor.js v2.0)
-- Process managers for the evolver itself
-  (managed by: evolver/index.js --loop + PID lock)
-- Cron job installers (crontab is managed by the system admin, not the evolver)
-
-Instead, focus innovation on:
-- NEW capabilities the system does not have (tools, integrations, automations)
-- Enhancements to EXISTING skills (better error handling, new features)
-- User-facing improvements (better responses, richer Feishu messages)
 
 Final Directive
 ━━━━━━━━━━━━━━━━━━━━━━
