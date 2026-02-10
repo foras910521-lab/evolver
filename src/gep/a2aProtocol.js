@@ -224,6 +224,49 @@ function fileTransportList(opts) {
   return fs.readdirSync(subdir).filter(function (f) { return f.endsWith('.jsonl'); });
 }
 
+// --- HTTP Transport (connects to evomap-hub) ---
+
+function httpTransportSend(message, opts) {
+  var hubUrl = (opts && opts.hubUrl) || process.env.A2A_HUB_URL;
+  if (!hubUrl) return { ok: false, error: 'A2A_HUB_URL not set' };
+  var endpoint = hubUrl.replace(/\/+$/, '') + '/a2a/' + message.message_type;
+  var body = JSON.stringify(message);
+  // Use dynamic import for fetch (available in Node 18+)
+  return fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body,
+  })
+    .then(function (res) { return res.json(); })
+    .then(function (data) { return { ok: true, response: data }; })
+    .catch(function (err) { return { ok: false, error: err.message }; });
+}
+
+function httpTransportReceive(opts) {
+  var hubUrl = (opts && opts.hubUrl) || process.env.A2A_HUB_URL;
+  if (!hubUrl) return Promise.resolve([]);
+  var assetType = (opts && opts.assetType) || null;
+  var fetchMsg = buildFetch({ assetType: assetType });
+  var endpoint = hubUrl.replace(/\/+$/, '') + '/a2a/fetch';
+  return fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fetchMsg),
+  })
+    .then(function (res) { return res.json(); })
+    .then(function (data) {
+      if (data && data.payload && Array.isArray(data.payload.results)) {
+        return data.payload.results;
+      }
+      return [];
+    })
+    .catch(function () { return []; });
+}
+
+function httpTransportList() {
+  return ['http'];
+}
+
 // --- Transport registry ---
 
 var transports = {
@@ -231,6 +274,11 @@ var transports = {
     send: fileTransportSend,
     receive: fileTransportReceive,
     list: fileTransportList,
+  },
+  http: {
+    send: httpTransportSend,
+    receive: httpTransportReceive,
+    list: httpTransportList,
   },
 };
 
@@ -268,4 +316,7 @@ module.exports = {
   fileTransportSend,
   fileTransportReceive,
   fileTransportList,
+  httpTransportSend,
+  httpTransportReceive,
+  httpTransportList,
 };
