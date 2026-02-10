@@ -15,6 +15,7 @@ const {
 } = require('./gep/assetStore');
 const { selectGeneAndCapsule, matchPatternToSignals } = require('./gep/selector');
 const { buildGepPrompt } = require('./gep/prompt');
+const { resolveStrategy } = require('./gep/strategy');
 const { extractCapabilityCandidates, renderCandidatesPreview } = require('./gep/candidates');
 const {
   getMemoryAdvice,
@@ -291,16 +292,38 @@ function checkSystemHealth() {
 }
 
 function getMutationDirective(logContent) {
-  // Signal hints derived from recent logs.
+  const strategy = resolveStrategy();
   const errorMatches = logContent.match(/\[ERROR|Error:|Exception:|FAIL|Failed|"isError":true/gi) || [];
   const errorCount = errorMatches.length;
   const isUnstable = errorCount > 2;
-  const recommendedIntent = isUnstable ? 'repair' : 'optimize';
+
+  // Strategy-aware intent recommendation
+  var recommendedIntent;
+  if (strategy.name === 'repair-only') {
+    recommendedIntent = 'repair';
+  } else if (strategy.name === 'innovate' && !isUnstable) {
+    recommendedIntent = 'innovate';
+  } else if (isUnstable && strategy.repair >= 0.3) {
+    recommendedIntent = 'repair';
+  } else if (isUnstable) {
+    recommendedIntent = 'optimize';
+  } else {
+    // Stable system: pick based on strategy weights (highest weight wins)
+    var weights = [
+      { intent: 'innovate', w: strategy.innovate },
+      { intent: 'optimize', w: strategy.optimize },
+      { intent: 'repair', w: strategy.repair },
+    ];
+    weights.sort(function(a, b) { return b.w - a.w; });
+    recommendedIntent = weights[0].intent;
+  }
 
   return `
 [Signal Hints]
 - recent_error_count: ${errorCount}
 - stability: ${isUnstable ? 'unstable' : 'stable'}
+- strategy: ${strategy.label} (${strategy.name})
+- target_allocation: ${Math.round(strategy.innovate * 100)}% innovate / ${Math.round(strategy.optimize * 100)}% optimize / ${Math.round(strategy.repair * 100)}% repair
 - recommended_intent: ${recommendedIntent}
 `;
 }
@@ -756,7 +779,9 @@ async function run() {
     Number(personalityState.creativity) >= 0.75 &&
     stableSuccess &&
     tailAvgScore >= 0.7;
+  const activeStrategy = resolveStrategy();
   const forceInnovation =
+    activeStrategy.name === 'innovate' ||
     String(process.env.FORCE_INNOVATION || process.env.EVOLVE_FORCE_INNOVATION || '').toLowerCase() === 'true';
   const mutationInnovateMode = !!IS_RANDOM_DRIFT || !!innovationPressure || !!forceInnovation;
   const mutationSignals = innovationPressure ? [...(Array.isArray(signals) ? signals : []), 'stable_success_plateau'] : signals;
@@ -986,6 +1011,7 @@ ${mutationDirective}
       `selected_capsule: ${selectedCapsuleId ? String(selectedCapsuleId) : '(none)'}`,
       `mutation_category: ${mutation && mutation.category ? String(mutation.category) : '(none)'}`,
       `force_innovation: ${forceInnovation ? 'true' : 'false'}`,
+      `strategy: ${activeStrategy.label} (${activeStrategy.name})`,
     ].join('\n');
     console.log(`[THOUGHT_PROCESS]\n${thought}\n[/THOUGHT_PROCESS]`);
   }

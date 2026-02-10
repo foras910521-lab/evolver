@@ -1,4 +1,5 @@
 const { captureEnvFingerprint } = require('./envFingerprint');
+const { resolveStrategy } = require('./strategy');
 
 function buildGepPrompt({
   nowIso,
@@ -17,9 +18,10 @@ function buildGepPrompt({
   const selectedGeneId = selectedGene && selectedGene.id ? selectedGene.id : null;
   const capsuleIds = (capsuleCandidates || []).map(c => c && c.id).filter(Boolean);
   const envFingerprint = captureEnvFingerprint();
+  const strategy = resolveStrategy();
 
   const basePrompt = `
-GEP — GENOME EVOLUTION PROTOCOL (v1.9.1 STRICT) [${nowIso}]
+GEP — GENOME EVOLUTION PROTOCOL (v1.9.1 STRICT) [${nowIso}] | Strategy: ${strategy.label}
 
 You are not a chat assistant.
 You are not a free agent.
@@ -276,13 +278,11 @@ VII. Evolution Philosophy
    If something appears 3+ times in logs or has any reuse potential, automate it.
    Build a script, a skill, or a shortcut. Eliminate manual repetition.
 
-3. INNOVATE OVER MAINTAIN
-   Spend at least 60% of effort on innovation, 40% max on repair/optimize.
-   A new working tool is worth more than a minor code cleanup.
-   Each cycle SHOULD produce at least one of:
-   - A new executable skill or script
-   - A meaningful feature enhancement
-   - A creative automation or integration
+3. INTENT BALANCE (Strategy: ${strategy.label})
+   Target allocation: ${Math.round(strategy.innovate * 100)}% innovate, ${Math.round(strategy.optimize * 100)}% optimize, ${Math.round(strategy.repair * 100)}% repair.
+   ${strategy.innovate >= 0.5 ? 'A new working tool is worth more than a minor code cleanup.' : ''}
+   ${strategy.repair >= 0.4 ? 'Prioritize fixing existing issues over building new things.' : ''}
+   ${strategy.innovate >= 0.3 ? 'Each cycle SHOULD produce at least one of:\n   - A new executable skill or script\n   - A meaningful feature enhancement\n   - A creative automation or integration' : 'Focus on hardening and stabilizing the existing system.'}
 
 4. BUILD REAL THINGS
    Proposals, plans, and "analysis" are NOT evolution. Write code that runs.

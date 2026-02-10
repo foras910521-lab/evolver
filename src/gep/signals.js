@@ -1,3 +1,5 @@
+var { resolveStrategy } = require('./strategy');
+
 // Opportunity signal names (shared with mutation.js and personality.js).
 var OPPORTUNITY_SIGNALS = [
   'user_feature_request',
@@ -200,13 +202,15 @@ function extractSignals({ recentSessionTranscript, todayLog, memorySnippet, user
   }
 
   // --- Force innovation when repair-heavy (ratio or consecutive) ---
-  // Count repair ratio in recent history: if >50% of last 8 are repair, force innovation
+  // Threshold is strategy-aware: "innovate" mode triggers sooner, "harden" mode allows more repairs
+  var strategy = resolveStrategy();
   var repairRatio = 0;
   if (history.recentIntents && history.recentIntents.length > 0) {
     var repairCount = history.recentIntents.filter(function(i) { return i === 'repair'; }).length;
     repairRatio = repairCount / history.recentIntents.length;
   }
-  var shouldForceInnovation = history.consecutiveRepairCount >= 3 || repairRatio >= 0.5;
+  var shouldForceInnovation = strategy.name === 'repair-only' ? false :
+    (history.consecutiveRepairCount >= 3 || repairRatio >= strategy.repairLoopThreshold);
   if (shouldForceInnovation) {
     // Remove repair-only signals (log_error, errsig) and inject innovation signals
     signals = signals.filter(function (s) {
