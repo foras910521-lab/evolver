@@ -1,5 +1,83 @@
 const { captureEnvFingerprint } = require('./envFingerprint');
 
+/**
+ * Build a minimal prompt for direct-reuse mode.
+ * Instead of full GEP reasoning, instructs the Hand to apply a known verified solution.
+ */
+function buildReusePrompt({ capsule, signals, nowIso }) {
+  const payload = capsule.payload || capsule;
+  const summary = payload.summary || capsule.summary || '(no summary)';
+  const gene = payload.gene || capsule.gene || '(unknown)';
+  const confidence = payload.confidence || capsule.confidence || 0;
+  const assetId = capsule.asset_id || '(unknown)';
+  const sourceNode = capsule.source_node_id || '(unknown)';
+  const trigger = Array.isArray(payload.trigger || capsule.trigger_text)
+    ? (payload.trigger || String(capsule.trigger_text || '').split(',')).join(', ')
+    : '';
+
+  return `
+GEP -- REUSE MODE (Search-First) [${nowIso || new Date().toISOString()}]
+
+You are applying a VERIFIED solution from the EvoMap Hub.
+This capsule was published, reviewed, and promoted by the network.
+
+Source asset: ${assetId}
+Source node: ${sourceNode}
+Confidence: ${confidence}
+Gene: ${gene}
+Trigger signals: ${trigger}
+
+Summary:
+${summary}
+
+Your signals: ${JSON.stringify(signals || [])}
+
+Instructions:
+1. Read the capsule details below and understand the fix.
+2. Apply the fix to the local codebase, adapting paths and names as needed.
+3. Run validation to confirm the fix works in this environment.
+4. If validation passes, run: node index.js solidify
+5. If it fails, ROLLBACK and report the failure.
+
+Capsule payload:
+\`\`\`json
+${JSON.stringify(payload, null, 2)}
+\`\`\`
+
+IMPORTANT: This is a reuse. Do NOT reinvent the solution. Apply it faithfully.
+After solidify, the source_type will be recorded as "reused".
+`.trim();
+}
+
+/**
+ * Build a Hub Matched Solution block to inject into the standard GEP prompt.
+ * Used in "reference" reuse mode -- the Brain sees this as a strong hint
+ * but can still adapt or override if local context requires it.
+ */
+function buildHubMatchedBlock({ capsule }) {
+  const payload = capsule.payload || capsule;
+  const summary = payload.summary || capsule.summary || '(no summary)';
+  const gene = payload.gene || capsule.gene || '(unknown)';
+  const confidence = payload.confidence || capsule.confidence || 0;
+  const assetId = capsule.asset_id || '(unknown)';
+  const sourceNode = capsule.source_node_id || '(unknown)';
+
+  return `
+Hub Matched Solution (STRONG REFERENCE -- prefer this over inventing from scratch):
+- Asset: ${assetId}
+- Node: ${sourceNode}
+- Confidence: ${confidence}
+- Gene: ${gene}
+- Summary: ${summary}
+- Payload:
+\`\`\`json
+${JSON.stringify(payload, null, 2)}
+\`\`\`
+If this solution applies to your current signals, USE IT as your primary approach.
+Adapt file paths and variable names to the local codebase, but preserve the core logic.
+`.trim();
+}
+
 function buildGepPrompt({
   nowIso,
   context,
@@ -12,6 +90,7 @@ function buildGepPrompt({
   capsulesPreview,
   capabilityCandidatesPreview,
   externalCandidatesPreview,
+  hubMatchedBlock,
 }) {
   const parentValue = parentEventId ? `"${parentEventId}"` : 'null';
   const selectedGeneId = selectedGene && selectedGene.id ? selectedGene.id : 'gene_<name>';
@@ -179,6 +258,9 @@ ${capsulesPreview}
 Context [Capability Candidates]:
 ${capabilityCandidatesPreview || '(none)'}
 
+Context [Hub Matched Solution]:
+${hubMatchedBlock || '(no hub match for current signals)'}
+
 Context [External Candidates]:
 ${externalCandidatesPreview || '(none)'}
 
@@ -209,4 +291,4 @@ ${executionContext}
   return basePrompt.slice(0, maxChars) + "\n...[TRUNCATED FOR BUDGET]...";
 }
 
-module.exports = { buildGepPrompt };
+module.exports = { buildGepPrompt, buildReusePrompt, buildHubMatchedBlock };

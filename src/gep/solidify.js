@@ -497,6 +497,9 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
     intent && mutation && typeof mutation.category === 'string' && String(intent) !== String(mutation.category);
   if (intentMismatch) protocolViolations.push(`intent_mismatch_with_mutation:${String(intent)}!=${String(mutation.category)}`);
 
+  const sourceType = lastRun && lastRun.source_type ? String(lastRun.source_type) : 'generated';
+  const reusedAssetId = lastRun && lastRun.reused_asset_id ? String(lastRun.reused_asset_id) : null;
+
   const event = {
     type: 'EvolutionEvent',
     schema_version: SCHEMA_VERSION,
@@ -510,6 +513,8 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
     blast_radius: { files: blast.files, lines: blast.lines },
     outcome: { status: outcomeStatus, score },
     capsule_id: capsuleId,
+    source_type: sourceType,
+    reused_asset_id: reusedAssetId,
     env_fingerprint: envFp,
     validation_report_id: validationReport.id,
     meta: {
@@ -565,6 +570,8 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
       outcome: { status: 'success', score },
       success_streak: 1,
       env_fingerprint: envFp,
+      source_type: sourceType,
+      reused_asset_id: reusedAssetId,
       a2a: { eligible_to_broadcast: false },
     };
     capsule.asset_id = computeAssetId(capsule);
@@ -605,7 +612,57 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
   };
   if (!dryRun) writeStateForSolidify(state);
 
-  return { ok: success, event, capsule, gene: geneUsed, constraintCheck, validation, validationReport, blast };
+  // Search-First Evolution: auto-publish eligible capsules to the Hub.
+  let publishResult = null;
+  if (!dryRun && capsule && capsule.a2a && capsule.a2a.eligible_to_broadcast) {
+    const sourceType = lastRun && lastRun.source_type ? String(lastRun.source_type) : 'generated';
+    const autoPublish = String(process.env.EVOLVER_AUTO_PUBLISH || 'true').toLowerCase() !== 'false';
+    const visibility = String(process.env.EVOLVER_DEFAULT_VISIBILITY || 'public').toLowerCase();
+    const minPublishScore = Number(process.env.EVOLVER_MIN_PUBLISH_SCORE) || 0.78;
+
+    // Skip publishing if: disabled, private, reused asset, or below minimum score
+    if (autoPublish && visibility === 'public' && sourceType !== 'reused' && (capsule.outcome.score || 0) >= minPublishScore) {
+      try {
+        const { buildPublish, httpTransportSend } = require('./a2aProtocol');
+        const { sanitizePayload } = require('./sanitize');
+        const hubUrl = (process.env.A2A_HUB_URL || '').replace(/\/+$/, '');
+
+        if (hubUrl) {
+          const sanitized = sanitizePayload(capsule);
+          const msg = buildPublish({ asset: sanitized });
+          const result = httpTransportSend(msg, { hubUrl });
+          // httpTransportSend returns a Promise
+          if (result && typeof result.then === 'function') {
+            result
+              .then(function (res) {
+                if (res && res.ok) {
+                  console.log(`[AutoPublish] Published ${capsule.asset_id || capsule.id} to Hub.`);
+                } else {
+                  console.log(`[AutoPublish] Hub rejected: ${JSON.stringify(res)}`);
+                }
+              })
+              .catch(function (err) {
+                console.log(`[AutoPublish] Failed (non-fatal): ${err.message}`);
+              });
+          }
+          publishResult = { attempted: true, asset_id: capsule.asset_id || capsule.id };
+        } else {
+          publishResult = { attempted: false, reason: 'no_hub_url' };
+        }
+      } catch (e) {
+        console.log(`[AutoPublish] Error (non-fatal): ${e.message}`);
+        publishResult = { attempted: false, reason: e.message };
+      }
+    } else {
+      const reason = !autoPublish ? 'auto_publish_disabled'
+        : visibility !== 'public' ? 'visibility_private'
+        : sourceType === 'reused' ? 'skip_reused_asset'
+        : 'below_min_score';
+      publishResult = { attempted: false, reason };
+    }
+  }
+
+  return { ok: success, event, capsule, gene: geneUsed, constraintCheck, validation, validationReport, blast, publishResult };
 }
 
 module.exports = {

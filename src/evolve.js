@@ -14,7 +14,8 @@ const {
   readRecentExternalCandidates,
 } = require('./gep/assetStore');
 const { selectGeneAndCapsule, matchPatternToSignals } = require('./gep/selector');
-const { buildGepPrompt } = require('./gep/prompt');
+const { buildGepPrompt, buildReusePrompt, buildHubMatchedBlock } = require('./gep/prompt');
+const { hubSearch } = require('./gep/hubSearch');
 const { extractCapabilityCandidates, renderCandidatesPreview } = require('./gep/candidates');
 const memoryAdapter = require('./gep/memoryGraphAdapter');
 const {
@@ -706,6 +707,20 @@ async function run() {
     }
   } catch (e) {}
 
+  // Search-First Evolution: query Hub for reusable solutions before local reasoning.
+  let hubHit = null;
+  try {
+    hubHit = await hubSearch(signals, { timeoutMs: 8000 });
+    if (hubHit && hubHit.hit) {
+      console.log(`[SearchFirst] Hub hit: asset=${hubHit.asset_id}, score=${hubHit.score}, mode=${hubHit.mode}`);
+    } else {
+      console.log(`[SearchFirst] No hub match (reason: ${hubHit && hubHit.reason ? hubHit.reason : 'unknown'}). Proceeding with local evolution.`);
+    }
+  } catch (e) {
+    console.log(`[SearchFirst] Hub search failed (non-fatal): ${e.message}`);
+    hubHit = { hit: false, reason: 'exception' };
+  }
+
   // Memory Graph reasoning: prefer high-confidence paths, suppress known low-success paths (unless drift is explicit).
   let memoryAdvice = null;
   try {
@@ -886,6 +901,9 @@ async function run() {
             : [],
         drift: !!IS_RANDOM_DRIFT,
         selected_by: selectedBy,
+        source_type: hubHit && hubHit.hit ? 'reused' : 'generated',
+        reused_asset_id: hubHit && hubHit.hit ? (hubHit.asset_id || null) : null,
+        reused_source_node: hubHit && hubHit.hit ? (hubHit.source_node_id || null) : null,
         baseline_untracked: baselineUntracked,
         baseline_git_head: baselineHead,
         blast_radius_estimate: blastRadiusEstimate,
@@ -961,19 +979,33 @@ Mutation directive:
 ${mutationDirective}
 `.trim();
 
-  const prompt = buildGepPrompt({
-    nowIso: new Date().toISOString(),
-    context,
-    signals,
-    selector,
-    parentEventId: getLastEventId(),
-    selectedGene,
-    capsuleCandidates,
-    genesPreview,
-    capsulesPreview,
-    capabilityCandidatesPreview,
-    externalCandidatesPreview,
-  });
+  // Build the prompt: in direct-reuse mode, use a minimal reuse prompt.
+  // In reference mode (or no hit), use the full GEP prompt with hub match injected.
+  const isDirectReuse = hubHit && hubHit.hit && hubHit.mode === 'direct';
+  const hubMatchedBlock = hubHit && hubHit.hit && hubHit.mode === 'reference'
+    ? buildHubMatchedBlock({ capsule: hubHit.match })
+    : null;
+
+  const prompt = isDirectReuse
+    ? buildReusePrompt({
+        capsule: hubHit.match,
+        signals,
+        nowIso: new Date().toISOString(),
+      })
+    : buildGepPrompt({
+        nowIso: new Date().toISOString(),
+        context,
+        signals,
+        selector,
+        parentEventId: getLastEventId(),
+        selectedGene,
+        capsuleCandidates,
+        genesPreview,
+        capsulesPreview,
+        capabilityCandidatesPreview,
+        externalCandidatesPreview,
+        hubMatchedBlock,
+      });
 
   // Optional: emit a compact thought process block for wrappers (noise-controlled).
   const emitThought = String(process.env.EVOLVE_EMIT_THOUGHT_PROCESS || '').toLowerCase() === 'true';
@@ -987,6 +1019,8 @@ ${mutationDirective}
       `selected_capsule: ${selectedCapsuleId ? String(selectedCapsuleId) : '(none)'}`,
       `mutation_category: ${mutation && mutation.category ? String(mutation.category) : '(none)'}`,
       `force_innovation: ${forceInnovation ? 'true' : 'false'}`,
+      `source_type: ${hubHit && hubHit.hit ? 'reused' : 'generated'}`,
+      `hub_reuse_mode: ${isDirectReuse ? 'direct' : hubMatchedBlock ? 'reference' : 'none'}`,
     ].join('\n');
     console.log(`[THOUGHT_PROCESS]\n${thought}\n[/THOUGHT_PROCESS]`);
   }
