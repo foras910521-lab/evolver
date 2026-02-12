@@ -720,6 +720,34 @@ async function run() {
     recentEvents,
   });
 
+  // Task distribution: fetch external tasks from Hub and inject their signals.
+  // If a bounty task is available, claim it and prioritize its signals.
+  let activeTask = null;
+  try {
+    const { fetchTasks, claimTask: claimTaskFn, taskToSignals } = require('./gep/taskReceiver');
+    const tasks = await fetchTasks();
+    if (tasks.length > 0) {
+      // Pick the highest-value task (bounty tasks first, then by creation date)
+      const sorted = tasks.sort((a, b) => {
+        const aHasBounty = a.bounty_id ? 1 : 0;
+        const bHasBounty = b.bounty_id ? 1 : 0;
+        if (aHasBounty !== bHasBounty) return bHasBounty - aHasBounty;
+        return 0;
+      });
+      const candidate = sorted[0];
+      const claimed = await claimTaskFn(candidate.task_id);
+      if (claimed) {
+        activeTask = candidate;
+        const taskSignals = taskToSignals(candidate);
+        // Inject task signals at the front (high priority)
+        signals.unshift(...taskSignals);
+        console.log(`[TaskReceiver] Claimed task ${candidate.task_id}, injected ${taskSignals.length} signals`);
+      }
+    }
+  } catch (e) {
+    // Task fetch failed -- continue with normal evolution
+  }
+
   const recentErrorMatches = recentMasterLog.match(/\[ERROR|Error:|Exception:|FAIL|Failed|"isError":true/gi) || [];
   const recentErrorCount = recentErrorMatches.length;
 
@@ -1037,6 +1065,7 @@ async function run() {
         baseline_untracked: baselineUntracked,
         baseline_git_head: baselineHead,
         blast_radius_estimate: blastRadiusEstimate,
+        active_task: activeTask ? { task_id: activeTask.task_id, bounty_id: activeTask.bounty_id } : null,
       };
     writeStateForSolidify(prevState);
   } catch (e) {

@@ -646,6 +646,20 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
               });
           }
           publishResult = { attempted: true, asset_id: capsule.asset_id || capsule.id };
+
+          // Complete external task if one was active for this run
+          if (lastRun && lastRun.active_task && lastRun.active_task.task_id) {
+            try {
+              const { completeTask } = require('./taskReceiver');
+              completeTask(lastRun.active_task.task_id, capsule.asset_id || capsule.id)
+                .then(function (ok) {
+                  if (ok) console.log(`[TaskReceiver] Completed task ${lastRun.active_task.task_id}`);
+                })
+                .catch(function () {});
+            } catch (taskErr) {
+              // non-fatal
+            }
+          }
         } else {
           publishResult = { attempted: false, reason: 'no_hub_url' };
         }
