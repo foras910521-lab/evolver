@@ -12,6 +12,8 @@ const DEVICE_ID_FILE = path.join(DEVICE_ID_DIR, 'device_id');
 
 let _cachedDeviceId = null;
 
+const DEVICE_ID_RE = /^[a-f0-9]{16,64}$/;
+
 function readMachineId() {
   // Linux: /etc/machine-id is a stable, unique 128-bit ID set at OS install time
   try {
@@ -67,9 +69,9 @@ function generateDeviceId() {
 function persistDeviceId(id) {
   try {
     if (!fs.existsSync(DEVICE_ID_DIR)) {
-      fs.mkdirSync(DEVICE_ID_DIR, { recursive: true });
+      fs.mkdirSync(DEVICE_ID_DIR, { recursive: true, mode: 0o700 });
     }
-    fs.writeFileSync(DEVICE_ID_FILE, id, 'utf8');
+    fs.writeFileSync(DEVICE_ID_FILE, id, { encoding: 'utf8', mode: 0o600 });
   } catch {}
 }
 
@@ -77,7 +79,7 @@ function loadPersistedDeviceId() {
   try {
     if (fs.existsSync(DEVICE_ID_FILE)) {
       const id = fs.readFileSync(DEVICE_ID_FILE, 'utf8').trim();
-      if (id && id.length >= 16) return id;
+      if (id && DEVICE_ID_RE.test(id)) return id;
     }
   } catch {}
   return null;
@@ -86,10 +88,13 @@ function loadPersistedDeviceId() {
 function getDeviceId() {
   if (_cachedDeviceId) return _cachedDeviceId;
 
-  // 1. Env var override
+  // 1. Env var override (validated)
   if (process.env.EVOMAP_DEVICE_ID) {
-    _cachedDeviceId = String(process.env.EVOMAP_DEVICE_ID);
-    return _cachedDeviceId;
+    const envId = String(process.env.EVOMAP_DEVICE_ID).trim().toLowerCase();
+    if (DEVICE_ID_RE.test(envId)) {
+      _cachedDeviceId = envId;
+      return _cachedDeviceId;
+    }
   }
 
   // 2. Previously persisted
