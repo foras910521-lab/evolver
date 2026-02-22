@@ -217,6 +217,24 @@ async function main() {
       if (res && res.gene) console.log(JSON.stringify(res.gene, null, 2));
       if (res && res.event) console.log(JSON.stringify(res.event, null, 2));
       if (res && res.capsule) console.log(JSON.stringify(res.capsule, null, 2));
+
+      if (res && res.ok && !dryRun) {
+        try {
+          const { shouldDistill, runDistillation } = require('./src/gep/skillDistiller');
+          if (shouldDistill()) {
+            runDistillation()
+              .then(function (dr) {
+                if (dr && dr.ok) console.log('[Distiller] Produced gene: ' + dr.gene.id);
+              })
+              .catch(function (e) { console.warn('[Distiller] ' + (e.message || e)); })
+              .finally(function () { process.exit(0); });
+            return;
+          }
+        } catch (e) {
+          console.warn('[Distiller] Init failed (non-fatal): ' + (e.message || e));
+        }
+      }
+
       process.exit(res && res.ok ? 0 : 2);
     } catch (error) {
       console.error('[SOLIDIFY] Error:', error);

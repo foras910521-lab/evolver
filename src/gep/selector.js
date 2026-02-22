@@ -79,8 +79,15 @@ function selectGene(genes, signals, opts) {
   });
   var useDrift = driftEnabled || driftIntensity > 0.15;
 
+  var DISTILLED_PREFIX = 'gene_distilled_';
+  var DISTILLED_SCORE_FACTOR = 0.8;
+
   const scored = genes
-    .map(g => ({ gene: g, score: scoreGene(g, signals) }))
+    .map(g => {
+      var s = scoreGene(g, signals);
+      if (s > 0 && g.id && String(g.id).startsWith(DISTILLED_PREFIX)) s *= DISTILLED_SCORE_FACTOR;
+      return { gene: g, score: s };
+    })
     .filter(x => x.score > 0)
     .sort((a, b) => b.score - a.score);
 
