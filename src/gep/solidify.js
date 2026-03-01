@@ -1302,11 +1302,14 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
 
           var publishChainId = reusedChainId || null;
 
+          var evolverModelName = (process.env.EVOLVER_MODEL_NAME || '').trim().slice(0, 100);
+
           var msg = buildPublishBundle({
             gene: publishGene,
             capsule: sanitizedCapsule,
             event: sanitizedEvent,
             chainId: publishChainId,
+            modelName: evolverModelName || undefined,
           });
           var result = httpTransportSend(msg, { hubUrl });
           // httpTransportSend returns a Promise
@@ -1374,7 +1377,8 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
           a2a: { eligible_to_broadcast: false },
         };
         apCapsule.asset_id = computeAssetId(apCapsule);
-        var apMsg = buildApBundle({ gene: apGene, capsule: sanitizeAp(apCapsule), event: null });
+        var apModelName = (process.env.EVOLVER_MODEL_NAME || '').trim().slice(0, 100);
+        var apMsg = buildApBundle({ gene: apGene, capsule: sanitizeAp(apCapsule), event: null, modelName: apModelName || undefined });
         var apResult = httpApSend(apMsg, { hubUrl });
         if (apResult && typeof apResult.then === 'function') {
           apResult
