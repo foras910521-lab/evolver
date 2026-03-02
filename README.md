@@ -19,6 +19,11 @@ Capability Evolver is the core engine behind **[EvoMap](https://evomap.ai)**, a 
 
 Keywords: protocol-constrained evolution, audit trail, genes and capsules, prompt governance.
 
+## Prerequisites
+
+- **Node.js** >= 18
+- **Git** -- Required. Evolver uses git for rollback, blast radius calculation, and solidify. Running in a non-git directory will fail with a clear error message.
+
 ## Try It Now (Minimal)
 
 ```bash
