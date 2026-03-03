@@ -277,15 +277,64 @@ async function main() {
       process.exit(2);
     }
 
+  } else if (command === 'asset-log') {
+    const { summarizeCallLog, readCallLog, getLogPath } = require('./src/gep/assetCallLog');
+
+    const runIdFlag = args.find(a => typeof a === 'string' && a.startsWith('--run='));
+    const actionFlag = args.find(a => typeof a === 'string' && a.startsWith('--action='));
+    const lastFlag = args.find(a => typeof a === 'string' && a.startsWith('--last='));
+    const sinceFlag = args.find(a => typeof a === 'string' && a.startsWith('--since='));
+    const jsonMode = args.includes('--json');
+
+    const opts = {};
+    if (runIdFlag) opts.run_id = runIdFlag.slice('--run='.length);
+    if (actionFlag) opts.action = actionFlag.slice('--action='.length);
+    if (lastFlag) opts.last = parseInt(lastFlag.slice('--last='.length), 10);
+    if (sinceFlag) opts.since = sinceFlag.slice('--since='.length);
+
+    if (jsonMode) {
+      const entries = readCallLog(opts);
+      console.log(JSON.stringify(entries, null, 2));
+    } else {
+      const summary = summarizeCallLog(opts);
+      console.log(`\n[Asset Call Log] ${getLogPath()}`);
+      console.log(`  Total entries: ${summary.total_entries}`);
+      console.log(`  Unique assets: ${summary.unique_assets}`);
+      console.log(`  Unique runs:   ${summary.unique_runs}`);
+      console.log(`  By action:`);
+      for (const [action, count] of Object.entries(summary.by_action)) {
+        console.log(`    ${action}: ${count}`);
+      }
+      if (summary.entries.length > 0) {
+        console.log(`\n  Recent entries:`);
+        const show = summary.entries.slice(-10);
+        for (const e of show) {
+          const ts = e.timestamp ? e.timestamp.slice(0, 19) : '?';
+          const assetShort = e.asset_id ? e.asset_id.slice(0, 20) + '...' : '(none)';
+          const sigPreview = Array.isArray(e.signals) ? e.signals.slice(0, 3).join(', ') : '';
+          console.log(`    [${ts}] ${e.action || '?'}  asset=${assetShort}  score=${e.score || '-'}  mode=${e.mode || '-'}  signals=[${sigPreview}]  run=${e.run_id || '-'}`);
+        }
+      } else {
+        console.log('\n  No entries found.');
+      }
+      console.log('');
+    }
+
   } else {
-    console.log(`Usage: node index.js [run|/evolve|solidify|distill] [--loop]
+    console.log(`Usage: node index.js [run|/evolve|solidify|distill|asset-log] [--loop]
   - solidify flags:
     - --dry-run
     - --no-rollback
     - --intent=repair|optimize|innovate
     - --summary=...
   - distill flags:
-    - --response-file=<path>  (LLM response file for skill distillation)`);
+    - --response-file=<path>  (LLM response file for skill distillation)
+  - asset-log flags:
+    - --run=<run_id>           (filter by run ID)
+    - --action=<action>        (filter: hub_search_hit, hub_search_miss, asset_reuse, asset_reference, asset_publish, asset_publish_skip)
+    - --last=<N>               (show last N entries)
+    - --since=<ISO_date>       (entries after date)
+    - --json                   (raw JSON output)`);
   }
 }
 

@@ -17,6 +17,7 @@ const {
 const { computeAssetId, SCHEMA_VERSION } = require('./contentHash');
 const { captureEnvFingerprint } = require('./envFingerprint');
 const { buildValidationReport } = require('./validationReport');
+const { logAssetCall } = require('./assetCallLog');
 
 function nowIso() {
   return new Date().toISOString();
@@ -1361,6 +1362,21 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
               });
           }
           publishResult = { attempted: true, asset_id: capsule.asset_id || capsule.id, bundle: true };
+          logAssetCall({
+            run_id: lastRun && lastRun.run_id ? lastRun.run_id : null,
+            action: 'asset_publish',
+            asset_id: capsule.asset_id || capsule.id,
+            asset_type: 'Capsule',
+            source_node_id: null,
+            chain_id: publishChainId || null,
+            signals: Array.isArray(capsule.trigger) ? capsule.trigger : [],
+            extra: {
+              source_type: sourceType,
+              reused_asset_id: reusedAssetId,
+              gene_id: publishGene && publishGene.id ? publishGene.id : null,
+              parent: parentRef || null,
+            },
+          });
         } else {
           publishResult = { attempted: false, reason: 'no_hub_url' };
         }
@@ -1374,6 +1390,14 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
         : sourceType === 'reused' ? 'skip_direct_reused_asset'
         : 'below_min_score';
       publishResult = { attempted: false, reason };
+      logAssetCall({
+        run_id: lastRun && lastRun.run_id ? lastRun.run_id : null,
+        action: 'asset_publish_skip',
+        asset_id: capsule.asset_id || capsule.id,
+        asset_type: 'Capsule',
+        reason,
+        signals: Array.isArray(capsule.trigger) ? capsule.trigger : [],
+      });
     }
   }
 

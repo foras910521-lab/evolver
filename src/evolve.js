@@ -18,6 +18,7 @@ const {
 const { selectGeneAndCapsule, matchPatternToSignals } = require('./gep/selector');
 const { buildGepPrompt, buildReusePrompt, buildHubMatchedBlock } = require('./gep/prompt');
 const { hubSearch } = require('./gep/hubSearch');
+const { logAssetCall } = require('./gep/assetCallLog');
 const { extractCapabilityCandidates, renderCandidatesPreview } = require('./gep/candidates');
 const memoryAdapter = require('./gep/memoryGraphAdapter');
 const {
@@ -1383,6 +1384,25 @@ async function run() {
         hub_lessons: hubLessons,
       };
     writeStateForSolidify(prevState);
+
+    if (hubHit && hubHit.hit) {
+      const assetAction = hubHit.mode === 'direct' ? 'asset_reuse' : 'asset_reference';
+      logAssetCall({
+        run_id: runId,
+        action: assetAction,
+        asset_id: hubHit.asset_id || null,
+        asset_type: hubHit.match && hubHit.match.type ? hubHit.match.type : null,
+        source_node_id: hubHit.source_node_id || null,
+        chain_id: hubHit.chain_id || null,
+        score: hubHit.score || null,
+        mode: hubHit.mode,
+        signals: Array.isArray(signals) ? signals : [],
+        extra: {
+          selected_gene_id: selectedGene && selectedGene.id ? selectedGene.id : null,
+          task_id: activeTask ? (activeTask.id || activeTask.task_id || null) : null,
+        },
+      });
+    }
   } catch (e) {
     console.error(`[SolidifyState] Write failed: ${e.message}`);
   }
