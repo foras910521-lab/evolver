@@ -1573,7 +1573,41 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
     }
   }
 
-  return { ok: success, event, capsule, gene: geneUsed, constraintCheck, validation, validationReport, blast, publishResult, antiPatternPublishResult, taskCompleteResult };
+
+  // --- Auto Hub Review: rate fetched assets based on solidify outcome ---
+  // When this cycle reused a Hub asset, submit a usage-verified review.
+  // Fire-and-forget: review submission must never block or affect solidify result.
+  var hubReviewResult = null;
+  if (!dryRun && reusedAssetId && (sourceType === 'reused' || sourceType === 'reference')) {
+    try {
+      var { submitHubReview } = require('./hubReview');
+      var reviewPromise = submitHubReview({
+        reusedAssetId: reusedAssetId,
+        sourceType: sourceType,
+        outcome: event.outcome,
+        gene: geneUsed,
+        signals: signals,
+        blast: blast,
+        constraintCheck: constraintCheck,
+        runId: lastRun && lastRun.run_id ? lastRun.run_id : null,
+      });
+      if (reviewPromise && typeof reviewPromise.then === 'function') {
+        reviewPromise
+          .then(function (r) {
+            hubReviewResult = r;
+            if (r && r.submitted) {
+              console.log('[HubReview] Review submitted successfully (rating=' + r.rating + ').');
+            }
+          })
+          .catch(function (err) {
+            console.log('[HubReview] Error (non-fatal): ' + (err && err.message ? err.message : err));
+          });
+      }
+    } catch (e) {
+      console.log('[HubReview] Error (non-fatal): ' + e.message);
+    }
+  }
+  return { ok: success, event, capsule, gene: geneUsed, constraintCheck, validation, validationReport, blast, publishResult, antiPatternPublishResult, taskCompleteResult, hubReviewResult };
 }
 
 module.exports = {
