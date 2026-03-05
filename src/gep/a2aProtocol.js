@@ -394,6 +394,7 @@ var _heartbeatConsecutiveFailures = 0;
 var _heartbeatTotalSent = 0;
 var _heartbeatTotalFailed = 0;
 var _latestAvailableWork = [];
+var _cachedHubNodeSecret = null;
 
 function getHubUrl() {
   return process.env.A2A_HUB_URL || process.env.EVOMAP_HUB_URL || '';
@@ -415,8 +416,17 @@ function sendHelloToHub() {
     signal: AbortSignal.timeout(15000),
   })
     .then(function (res) { return res.json(); })
-    .then(function (data) { return { ok: true, response: data }; })
+    .then(function (data) {
+      if (data && data.node_secret) {
+        _cachedHubNodeSecret = data.node_secret;
+      }
+      return { ok: true, response: data };
+    })
     .catch(function (err) { return { ok: false, error: err.message }; });
+}
+
+function getHubNodeSecret() {
+  return _cachedHubNodeSecret;
 }
 
 function sendHeartbeat() {
@@ -598,4 +608,5 @@ module.exports = {
   getHeartbeatStats,
   getLatestAvailableWork,
   consumeAvailableWork,
+  getHubNodeSecret,
 };

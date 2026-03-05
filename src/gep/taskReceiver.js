@@ -6,9 +6,16 @@
 //     matching via memory graph history.
 // ---------------------------------------------------------------------------
 
-const { getNodeId } = require('./a2aProtocol');
+const { getNodeId, getHubNodeSecret } = require('./a2aProtocol');
 
 const HUB_URL = process.env.A2A_HUB_URL || process.env.EVOMAP_HUB_URL || 'https://evomap.ai';
+
+function buildAuthHeaders() {
+  var headers = { 'Content-Type': 'application/json' };
+  var secret = getHubNodeSecret();
+  if (secret) headers['Authorization'] = 'Bearer ' + secret;
+  return headers;
+}
 
 const TASK_STRATEGY = String(process.env.TASK_STRATEGY || 'balanced').toLowerCase();
 const TASK_MIN_CAPABILITY_MATCH = Number(process.env.TASK_MIN_CAPABILITY_MATCH) || 0.1;
@@ -299,7 +306,7 @@ async function claimTask(taskId) {
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildAuthHeaders(),
       body: JSON.stringify({ task_id: taskId, node_id: nodeId }),
       signal: controller.signal,
     });
@@ -328,7 +335,7 @@ async function completeTask(taskId, assetId) {
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildAuthHeaders(),
       body: JSON.stringify({ task_id: taskId, asset_id: assetId, node_id: nodeId }),
       signal: controller.signal,
     });
@@ -379,7 +386,7 @@ async function claimWorkerTask(taskId) {
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildAuthHeaders(),
       body: JSON.stringify({ task_id: taskId, node_id: nodeId }),
       signal: controller.signal,
     });
@@ -403,7 +410,7 @@ async function completeWorkerTask(assignmentId, resultAssetId) {
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildAuthHeaders(),
       body: JSON.stringify({ assignment_id: assignmentId, node_id: nodeId, result_asset_id: resultAssetId }),
       signal: controller.signal,
     });
