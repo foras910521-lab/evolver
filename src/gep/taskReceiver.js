@@ -6,15 +6,12 @@
 //     matching via memory graph history.
 // ---------------------------------------------------------------------------
 
-const { getNodeId, getHubNodeSecret } = require('./a2aProtocol');
+const { getNodeId, getHubNodeSecret, buildHubHeaders } = require('./a2aProtocol');
 
 const HUB_URL = process.env.A2A_HUB_URL || process.env.EVOMAP_HUB_URL || 'https://evomap.ai';
 
 function buildAuthHeaders() {
-  var headers = { 'Content-Type': 'application/json' };
-  var secret = getHubNodeSecret();
-  if (secret) headers['Authorization'] = 'Bearer ' + secret;
-  return headers;
+  return buildHubHeaders();
 }
 
 const TASK_STRATEGY = String(process.env.TASK_STRATEGY || 'balanced').toLowerCase();
@@ -66,7 +63,7 @@ async function fetchTasks(opts) {
 
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildAuthHeaders(),
       body: JSON.stringify(msg),
       signal: controller.signal,
     });

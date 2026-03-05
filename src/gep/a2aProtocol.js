@@ -349,10 +349,9 @@ function httpTransportSend(message, opts) {
   if (!hubUrl) return { ok: false, error: 'A2A_HUB_URL not set' };
   var endpoint = hubUrl.replace(/\/+$/, '') + '/a2a/' + message.message_type;
   var body = JSON.stringify(message);
-  // Use dynamic import for fetch (available in Node 18+)
   return fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: buildHubHeaders(),
     body: body,
   })
     .then(function (res) { return res.json(); })
@@ -369,7 +368,7 @@ function httpTransportReceive(opts) {
   var endpoint = hubUrl.replace(/\/+$/, '') + '/a2a/fetch';
   return fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: buildHubHeaders(),
     body: JSON.stringify(fetchMsg),
   })
     .then(function (res) { return res.json(); })
@@ -396,8 +395,36 @@ var _heartbeatTotalFailed = 0;
 var _latestAvailableWork = [];
 var _cachedHubNodeSecret = null;
 
+var NODE_SECRET_FILE = path.join(NODE_ID_DIR, 'node_secret');
+
+function _loadPersistedNodeSecret() {
+  try {
+    if (fs.existsSync(NODE_SECRET_FILE)) {
+      var s = fs.readFileSync(NODE_SECRET_FILE, 'utf8').trim();
+      if (s && /^[a-f0-9]{64}$/i.test(s)) return s;
+    }
+  } catch {}
+  return null;
+}
+
+function _persistNodeSecret(secret) {
+  try {
+    if (!fs.existsSync(NODE_ID_DIR)) {
+      fs.mkdirSync(NODE_ID_DIR, { recursive: true, mode: 0o700 });
+    }
+    fs.writeFileSync(NODE_SECRET_FILE, secret, { encoding: 'utf8', mode: 0o600 });
+  } catch {}
+}
+
 function getHubUrl() {
   return process.env.A2A_HUB_URL || process.env.EVOMAP_HUB_URL || '';
+}
+
+function buildHubHeaders() {
+  var headers = { 'Content-Type': 'application/json' };
+  var secret = getHubNodeSecret();
+  if (secret) headers['Authorization'] = 'Bearer ' + secret;
+  return headers;
 }
 
 function sendHelloToHub() {
@@ -417,8 +444,12 @@ function sendHelloToHub() {
   })
     .then(function (res) { return res.json(); })
     .then(function (data) {
-      if (data && data.node_secret) {
-        _cachedHubNodeSecret = data.node_secret;
+      var secret = (data && data.payload && data.payload.node_secret)
+        || (data && data.node_secret)
+        || null;
+      if (secret && /^[a-f0-9]{64}$/i.test(secret)) {
+        _cachedHubNodeSecret = secret;
+        _persistNodeSecret(secret);
       }
       return { ok: true, response: data };
     })
@@ -426,7 +457,13 @@ function sendHelloToHub() {
 }
 
 function getHubNodeSecret() {
-  return _cachedHubNodeSecret;
+  if (_cachedHubNodeSecret) return _cachedHubNodeSecret;
+  var persisted = _loadPersistedNodeSecret();
+  if (persisted) {
+    _cachedHubNodeSecret = persisted;
+    return persisted;
+  }
+  return null;
 }
 
 function sendHeartbeat() {
@@ -458,7 +495,7 @@ function sendHeartbeat() {
 
   return fetch(endpoint, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: buildHubHeaders(),
     body: body,
     signal: AbortSignal.timeout(10000),
   })
@@ -609,4 +646,5 @@ module.exports = {
   getLatestAvailableWork,
   consumeAvailableWork,
   getHubNodeSecret,
+  buildHubHeaders,
 };

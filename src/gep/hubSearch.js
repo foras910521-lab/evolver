@@ -7,7 +7,7 @@
 //   Phase 1: POST /a2a/fetch with signals + search_only=true (free, metadata only)
 //   Phase 2: POST /a2a/fetch with asset_ids=[selected] (pays for 1 asset only)
 
-const { getNodeId, buildFetch } = require('./a2aProtocol');
+const { getNodeId, buildFetch, getHubNodeSecret } = require('./a2aProtocol');
 const { logAssetCall } = require('./assetCallLog');
 
 const DEFAULT_MIN_REUSE_SCORE = 0.72;
@@ -101,8 +101,13 @@ async function hubSearch(signals, opts) {
     const timer = setTimeout(() => controller.abort(TIMEOUT_REASON), timeout);
 
     const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
-    const token = process.env.A2A_HUB_TOKEN;
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const secret = getHubNodeSecret();
+    if (secret) {
+      headers['Authorization'] = 'Bearer ' + secret;
+    } else {
+      const token = process.env.A2A_HUB_TOKEN;
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    }
 
     const res = await fetch(endpoint, {
       method: 'POST',
