@@ -682,6 +682,7 @@ function rollbackTracked(repoRoot) {
     return;
   }
 
+  console.log('[Rollback] EVOLVER_ROLLBACK_MODE=hard, resetting tracked files in: ' + repoRoot);
   tryRunCmd('git restore --staged --worktree .', { cwd: repoRoot, timeoutMs: 60000 });
   tryRunCmd('git reset --hard', { cwd: repoRoot, timeoutMs: 60000 });
 }
