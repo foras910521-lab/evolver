@@ -500,17 +500,21 @@ function sendHeartbeat() {
     timestamp: new Date().toISOString(),
   };
 
-  if (!bodyObj.meta) bodyObj.meta = {};
+  var meta = {};
 
   if (process.env.WORKER_ENABLED === '1') {
     var domains = (process.env.WORKER_DOMAINS || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-    bodyObj.meta.worker_enabled = true;
-    bodyObj.meta.worker_domains = domains;
-    bodyObj.meta.max_load = Math.max(1, Number(process.env.WORKER_MAX_LOAD) || 5);
+    meta.worker_enabled = true;
+    meta.worker_domains = domains;
+    meta.max_load = Math.max(1, Number(process.env.WORKER_MAX_LOAD) || 5);
   }
 
   if (_pendingCommitmentUpdates.length > 0) {
-    bodyObj.meta.commitment_updates = _pendingCommitmentUpdates.splice(0);
+    meta.commitment_updates = _pendingCommitmentUpdates.splice(0);
+  }
+
+  if (Object.keys(meta).length > 0) {
+    bodyObj.meta = meta;
   }
 
   var body = JSON.stringify(bodyObj);

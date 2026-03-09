@@ -231,7 +231,9 @@ function estimateCommitmentDeadline(task) {
     if (!isNaN(expiresAt.getTime()) && expiresAt < deadline) {
       var remaining = expiresAt.getTime() - Date.now();
       if (remaining < MIN_COMMITMENT_MS) return null;
-      deadline = new Date(expiresAt.getTime() - 60000);
+      var adjusted = new Date(expiresAt.getTime() - 60000);
+      if (adjusted.getTime() - Date.now() < MIN_COMMITMENT_MS) return null;
+      deadline = adjusted;
     }
   }
 
