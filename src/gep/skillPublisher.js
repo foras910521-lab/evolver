@@ -9,7 +9,7 @@ var { getHubUrl, buildHubHeaders, getNodeId } = require('./a2aProtocol');
  * @returns {string} SKILL.md content
  */
 function sanitizeSkillName(rawName) {
-  var name = rawName.replace(/^gene_distilled_/, '').replace(/^gene_/, '').replace(/_/g, '-');
+  var name = rawName.replace(/[\r\n]+/g, '-').replace(/^gene_distilled_/, '').replace(/^gene_/, '').replace(/_/g, '-');
   if (/^\d{8,}/.test(name) || /^(cursor|vscode|vim|emacs|windsurf|copilot|cline|codex)[-]?\d*$/i.test(name)) {
     return null;
   }
@@ -39,7 +39,7 @@ function geneToSkillMd(gene) {
     fallbackWords = fallbackWords.filter(function (w) { if (seen[w]) return false; seen[w] = true; return true; });
     name = fallbackWords.length >= 2 ? fallbackWords.join('-') : 'auto-distilled-skill';
   }
-  var desc = gene.summary || 'AI agent skill distilled from evolution experience.';
+  var desc = (gene.summary || 'AI agent skill distilled from evolution experience.').replace(/[\r\n]+/g, ' ').trim();
 
   var lines = [
     '---',
