@@ -141,8 +141,19 @@ function buildExecutionTrace({
     trace.error_signatures = [];
     if (constraintCheck && Array.isArray(constraintCheck.violations)) {
       for (const v of constraintCheck.violations) {
-        const sig = extractErrorSignature(v);
-        if (sig) trace.error_signatures.push(sig);
+        // Constraint violations have known prefixes; classify directly
+        const vStr = String(v);
+        if (vStr.startsWith('max_files')) trace.error_signatures.push('max_files_exceeded');
+        else if (vStr.startsWith('forbidden_path')) trace.error_signatures.push('forbidden_path');
+        else if (vStr.startsWith('HARD CAP')) trace.error_signatures.push('hard_cap_breach');
+        else if (vStr.startsWith('CRITICAL')) trace.error_signatures.push('critical_overrun');
+        else if (vStr.startsWith('critical_path')) trace.error_signatures.push('critical_path_modified');
+        else if (vStr.startsWith('canary_failed')) trace.error_signatures.push('canary_failed');
+        else if (vStr.startsWith('ethics:')) trace.error_signatures.push('ethics_violation');
+        else {
+          const sig = extractErrorSignature(v);
+          if (sig) trace.error_signatures.push(sig);
+        }
       }
     }
     if (validation && Array.isArray(validation.results)) {

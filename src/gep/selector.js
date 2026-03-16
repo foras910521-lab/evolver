@@ -227,7 +227,7 @@ function banGenesFromFailedCapsules(failedCapsules, signals, existingBans) {
   return bans;
 }
 
-function selectGeneAndCapsule({ genes, capsules, signals, memoryAdvice, driftEnabled, failedCapsules }) {
+function selectGeneAndCapsule({ genes, capsules, signals, memoryAdvice, driftEnabled, failedCapsules, capabilityGaps, noveltyScore }) {
   const bannedGeneIds =
     memoryAdvice && memoryAdvice.bannedGeneIds instanceof Set ? memoryAdvice.bannedGeneIds : new Set();
   const preferredGeneId = memoryAdvice && memoryAdvice.preferredGeneId ? memoryAdvice.preferredGeneId : null;
@@ -242,6 +242,8 @@ function selectGeneAndCapsule({ genes, capsules, signals, memoryAdvice, driftEna
     bannedGeneIds: effectiveBans,
     preferredGeneId,
     driftEnabled: !!driftEnabled,
+    capabilityGaps: Array.isArray(capabilityGaps) ? capabilityGaps : [],
+    noveltyScore: Number.isFinite(Number(noveltyScore)) ? Number(noveltyScore) : null,
   });
   const capsule = selectCapsule(capsules, signals);
   const selector = buildSelectorDecision({

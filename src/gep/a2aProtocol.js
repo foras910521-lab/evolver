@@ -403,6 +403,8 @@ var _heartbeatFpSent = false;
 var _latestAvailableWork = [];
 var _latestOverdueTasks = [];
 var _latestSkillStoreHint = null;
+var _latestNoveltyHint = null;
+var _latestCapabilityGaps = [];
 var _pendingCommitmentUpdates = [];
 var _cachedHubNodeSecret = null;
 var _heartbeatIntervalMs = 0;
@@ -583,6 +585,15 @@ function sendHeartbeat() {
           console.log('[Skill Store] ' + data.skill_store.hint);
         }
       }
+      if (data.novelty && typeof data.novelty === 'object') {
+        _latestNoveltyHint = data.novelty;
+      }
+      if (Array.isArray(data.capability_gaps) && data.capability_gaps.length > 0) {
+        _latestCapabilityGaps = data.capability_gaps;
+      }
+      if (data.circle_experience && typeof data.circle_experience === 'object') {
+        console.log('[EvolutionCircle] Active circle: ' + (data.circle_experience.circle_id || '?') + ' (' + (data.circle_experience.member_count || 0) + ' members)');
+      }
       _heartbeatConsecutiveFailures = 0;
       try {
         var logPath = getEvolverLogPath();
@@ -644,6 +655,14 @@ function consumeOverdueTasks() {
   var tasks = _latestOverdueTasks;
   _latestOverdueTasks = [];
   return tasks;
+}
+
+function getNoveltyHint() {
+  return _latestNoveltyHint;
+}
+
+function getCapabilityGaps() {
+  return _latestCapabilityGaps;
 }
 
 /**
@@ -761,4 +780,6 @@ module.exports = {
   queueCommitmentUpdate,
   getHubNodeSecret,
   buildHubHeaders,
+  getNoveltyHint,
+  getCapabilityGaps,
 };

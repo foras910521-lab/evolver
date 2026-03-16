@@ -1408,6 +1408,15 @@ async function run() {
     console.log('[FailedCapsules] Read failed (non-fatal): ' + e.message);
   }
 
+  // Heartbeat hints: novelty score and capability gaps for diversity-directed drift
+  var heartbeatNovelty = null;
+  var heartbeatCapGaps = [];
+  try {
+    var { getNoveltyHint, getCapabilityGaps: getCapGaps } = require('./gep/a2aProtocol');
+    heartbeatNovelty = getNoveltyHint();
+    heartbeatCapGaps = getCapGaps() || [];
+  } catch (e) {}
+
   const { selectedGene, capsuleCandidates, selector } = selectGeneAndCapsule({
     genes,
     capsules,
@@ -1415,6 +1424,8 @@ async function run() {
     memoryAdvice,
     driftEnabled: IS_RANDOM_DRIFT,
     failedCapsules: recentFailedCapsules,
+    capabilityGaps: heartbeatCapGaps,
+    noveltyScore: heartbeatNovelty && Number.isFinite(heartbeatNovelty.score) ? heartbeatNovelty.score : null,
   });
 
   const selectedBy = memoryAdvice && memoryAdvice.preferredGeneId ? 'memory_graph+selector' : 'selector';
