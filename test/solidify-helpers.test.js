@@ -13,6 +13,7 @@ const {
   BLAST_RADIUS_HARD_CAP_FILES,
   BLAST_RADIUS_HARD_CAP_LINES,
 } = require('../src/gep/policyCheck');
+const { computeProcessScores } = require('../src/gep/solidify');
 const { normalizeRelPath, isCriticalProtectedPath } = require('../src/gep/gitOps');
 
 describe('normalizeRelPath', () => {
@@ -216,6 +217,34 @@ describe('isValidationCommandAllowed', () => {
     assert.equal(isValidationCommandAllowed('node -e "process.exit(1)"'), false);
   });
 
+  it('blocks node --eval', () => {
+    assert.equal(isValidationCommandAllowed('node --eval "console.log(1)"'), false);
+  });
+
+  it('blocks node -p (print)', () => {
+    assert.equal(isValidationCommandAllowed('node -p "1+1"'), false);
+  });
+
+  it('blocks node --print', () => {
+    assert.equal(isValidationCommandAllowed('node --print "require(\'fs\')"'), false);
+  });
+
+  it('blocks $() command substitution', () => {
+    assert.equal(isValidationCommandAllowed('node $(echo malicious).js'), false);
+  });
+
+  it('allows npx commands', () => {
+    assert.equal(isValidationCommandAllowed('npx vitest run'), true);
+  });
+
+  it('allows node scripts with arguments', () => {
+    assert.equal(isValidationCommandAllowed('node scripts/validate-modules.js ./src/evolve ./src/gep/solidify'), true);
+  });
+
+  it('allows node scripts/validate-suite.js', () => {
+    assert.equal(isValidationCommandAllowed('node scripts/validate-suite.js'), true);
+  });
+
   it('blocks non-allowed commands', () => {
     assert.equal(isValidationCommandAllowed('rm -rf /'), false);
     assert.equal(isValidationCommandAllowed('curl http://evil.com'), false);
@@ -267,5 +296,66 @@ describe('classifyFailureMode', () => {
     const r = classifyFailureMode({});
     assert.equal(r.mode, 'soft');
     assert.equal(r.reasonClass, 'unknown');
+  });
+});
+
+describe('computeProcessScores', () => {
+  it('gives validation_pass_rate of 0.5 when validation results are empty', () => {
+    const scores = computeProcessScores({
+      constraintCheck: { ok: true, violations: [] },
+      validation: { ok: true, results: [] },
+      protocolViolations: [],
+      canary: { ok: true, skipped: true },
+      blast: { files: 1, lines: 10 },
+      geneUsed: { type: 'Gene', id: 'gene_test', constraints: { max_files: 20 } },
+      signals: ['error'],
+      mutation: { rationale: 'test fix', category: 'repair', risk_level: 'low' },
+    });
+    assert.equal(scores.validation_pass_rate, 0.5);
+  });
+
+  it('gives validation_pass_rate of 1.0 when all validations pass', () => {
+    const scores = computeProcessScores({
+      constraintCheck: { ok: true, violations: [] },
+      validation: { ok: true, results: [{ ok: true, cmd: 'node test.js' }] },
+      protocolViolations: [],
+      canary: { ok: true, skipped: true },
+      blast: { files: 1, lines: 10 },
+      geneUsed: { type: 'Gene', id: 'gene_test', constraints: { max_files: 20 } },
+      signals: ['error'],
+      mutation: { rationale: 'test fix', category: 'repair', risk_level: 'low' },
+    });
+    assert.equal(scores.validation_pass_rate, 1.0);
+  });
+
+  it('gives validation_pass_rate of 0 when validation failed and has no results', () => {
+    const scores = computeProcessScores({
+      constraintCheck: { ok: true, violations: [] },
+      validation: { ok: false, results: [] },
+      protocolViolations: [],
+      canary: { ok: true, skipped: true },
+      blast: { files: 1, lines: 10 },
+      geneUsed: { type: 'Gene', id: 'gene_test', constraints: { max_files: 20 } },
+      signals: ['error'],
+      mutation: null,
+    });
+    assert.equal(scores.validation_pass_rate, 0);
+  });
+
+  it('computes partial validation score when some results fail', () => {
+    const scores = computeProcessScores({
+      constraintCheck: { ok: true, violations: [] },
+      validation: { ok: false, results: [
+        { ok: true, cmd: 'node a.js' },
+        { ok: false, cmd: 'node b.js' },
+      ] },
+      protocolViolations: [],
+      canary: { ok: true, skipped: true },
+      blast: { files: 1, lines: 10 },
+      geneUsed: { type: 'Gene', id: 'gene_test', constraints: { max_files: 20 } },
+      signals: ['error'],
+      mutation: { rationale: 'fix', category: 'repair' },
+    });
+    assert.equal(scores.validation_pass_rate, 0.5);
   });
 });

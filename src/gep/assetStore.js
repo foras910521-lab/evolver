@@ -53,8 +53,8 @@ function getDefaultGenes() {
         ],
         constraints: { max_files: 12, forbidden_paths: ['.git', 'node_modules'] },
         validation: [
-          buildValidationCmd(['src/evolve', 'src/gep/solidify']),
-          buildValidationCmd(['src/gep/selector', 'src/gep/memoryGraph']),
+          buildValidationCmd(['src/evolve', 'src/gep/solidify', 'src/gep/policyCheck', 'src/gep/selector', 'src/gep/memoryGraph', 'src/gep/assetStore']),
+          'node scripts/validate-suite.js',
         ],
       },
       {
@@ -70,7 +70,10 @@ function getDefaultGenes() {
           'Solidify: record EvolutionEvent, update Gene definitions, create Capsule on success',
         ],
         constraints: { max_files: 20, forbidden_paths: ['.git', 'node_modules'] },
-        validation: [buildValidationCmd(['src/evolve', 'src/gep/prompt'])],
+        validation: [
+          buildValidationCmd(['src/evolve', 'src/gep/prompt', 'src/gep/contentHash', 'src/gep/skillDistiller']),
+          'node scripts/validate-suite.js',
+        ],
       },
     ],
   };

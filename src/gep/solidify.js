@@ -389,7 +389,10 @@ function buildAutoGene({ signals, intent }) {
         'skills/git-sync',
       ],
     },
-    validation: ['node scripts/validate-modules.js ./src/gep/solidify'],
+    validation: [
+      'node scripts/validate-modules.js ./src/gep/solidify ./src/gep/policyCheck ./src/gep/assetStore',
+      'node scripts/validate-suite.js',
+    ],
     epigenetic_marks: [], // Epigenetic marks: environment-specific expression modifiers
   };
   gene.asset_id = computeAssetId(gene);
@@ -488,7 +491,9 @@ function computeProcessScores(opts) {
   }
 
   // Phase 6: Validation pass rate
-  let validationScore = 1.0;
+  // Empty validation arrays get a penalty (0.5) -- genes SHOULD define
+  // at least one validation command to prove the change is correct.
+  let validationScore = 0.5;
   if (validation && Array.isArray(validation.results) && validation.results.length > 0) {
     const passed = validation.results.filter(function (r) { return r && r.ok; }).length;
     validationScore = passed / validation.results.length;

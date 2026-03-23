@@ -218,6 +218,26 @@ describe('validateSynthesizedGene', () => {
     var result = validateSynthesizedGene(gene, []);
     assert.deepEqual(result.gene.validation, ['node test.js', 'npm test']);
   });
+
+  it('strips node -e and node --eval commands (consistent with policyCheck)', () => {
+    var gene = {
+      type: 'Gene', id: 'gene_distilled_eval_block', category: 'opt',
+      signals_match: ['test_signal'], strategy: ['step one', 'step two', 'step three'],
+      constraints: { forbidden_paths: ['.git', 'node_modules'] },
+      validation: [
+        'node scripts/validate-modules.js ./src/evolve',
+        'node -e "process.exit(0)"',
+        'node --eval "require(\'fs\')"',
+        'node -p "1+1"',
+        'npm test',
+      ],
+    };
+    var result = validateSynthesizedGene(gene, []);
+    assert.deepEqual(result.gene.validation, [
+      'node scripts/validate-modules.js ./src/evolve',
+      'npm test',
+    ]);
+  });
 });
 
 describe('collectDistillationData', () => {

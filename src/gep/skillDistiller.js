@@ -451,15 +451,12 @@ function validateSynthesizedGene(gene, existingGenes) {
   }
 
   // --- Validation command sanitization ---
-  const ALLOWED_PREFIXES = ['node ', 'npm ', 'npx '];
+  // Reuse the same safety check as policyCheck.runValidations() to avoid
+  // accepting commands during distillation that would be BLOCKED at runtime.
+  const { isValidationCommandAllowed } = require('./policyCheck');
   if (Array.isArray(gene.validation)) {
     gene.validation = gene.validation.filter(function (cmd) {
-      const c = String(cmd || '').trim();
-      if (!c) return false;
-      if (!ALLOWED_PREFIXES.some(function (p) { return c.startsWith(p); })) return false;
-      if (/`|\$\(/.test(c)) return false;
-      const stripped = c.replace(/"[^"]*"/g, '').replace(/'[^']*'/g, '');
-      return !/[;&|><]/.test(stripped);
+      return isValidationCommandAllowed(cmd);
     });
   }
 
