@@ -580,6 +580,11 @@ function sendHeartbeat() {
     meta.max_load = Math.max(1, Number(process.env.WORKER_MAX_LOAD) || 5);
   }
 
+  const modelTier = (process.env.EVOLVER_MODEL_TIER || '').trim();
+  if (modelTier) {
+    meta.model_tier = modelTier;
+  }
+
   if (_pendingCommitmentUpdates.length > 0) {
     meta.commitment_updates = _pendingCommitmentUpdates.splice(0);
   }
@@ -1096,6 +1101,67 @@ function hubOpenEventStream(opts) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Managed SSE stream -- starts/stops alongside the heartbeat loop.
+// Events are buffered into _hubEvents for consumption by evolve.js.
+// Falls back gracefully to poll-based events if SSE is unavailable.
+// ---------------------------------------------------------------------------
+
+var _activeStream = null;
+var _sseReconnectTimer = null;
+var _sseReconnectMs = 5000;
+var _sseMaxReconnectMs = 120000;
+
+function startEventStream() {
+  if (_activeStream) return;
+  if (process.env.EVOLVER_SSE_DISABLED === '1') return;
+
+  var result = hubOpenEventStream({ durationMs: 600000 });
+  if (!result.ok) {
+    console.log('[SSE] Event stream unavailable: ' + (result.error || 'unknown') + ' (falling back to poll)');
+    return;
+  }
+
+  _activeStream = result;
+  _sseReconnectMs = 5000;
+  console.log('[SSE] Event stream connected');
+
+  result.eventSource.onmessage = function (ev) {
+    try {
+      var parsed = JSON.parse(ev.data);
+      if (parsed && parsed.type) {
+        if (!_hubEvents) _hubEvents = [];
+        _hubEvents.push(parsed);
+      }
+    } catch (e) {}
+  };
+
+  result.eventSource.onerror = function () {
+    console.warn('[SSE] Stream error, will reconnect in ' + Math.round(_sseReconnectMs / 1000) + 's');
+    stopEventStream();
+    _sseReconnectTimer = setTimeout(function () {
+      _sseReconnectTimer = null;
+      startEventStream();
+    }, _sseReconnectMs);
+    _sseReconnectMs = Math.min(_sseReconnectMs * 2, _sseMaxReconnectMs);
+  };
+}
+
+function stopEventStream() {
+  if (_activeStream) {
+    try { _activeStream.close(); } catch (e) {}
+    _activeStream = null;
+  }
+  if (_sseReconnectTimer) {
+    clearTimeout(_sseReconnectTimer);
+    _sseReconnectTimer = null;
+  }
+}
+
+function isEventStreamActive() {
+  return _activeStream !== null;
+}
+
 module.exports = {
   PROTOCOL_NAME,
   PROTOCOL_VERSION,
@@ -1149,4 +1215,7 @@ module.exports = {
   hubGetAuditLogs,
   hubGetWorkReport,
   hubOpenEventStream,
+  startEventStream,
+  stopEventStream,
+  isEventStreamActive,
 };

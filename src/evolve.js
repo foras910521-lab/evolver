@@ -27,7 +27,7 @@ const {
   memoryGraphPath,
 } = memoryAdapter;
 const { readStateForSolidify, writeStateForSolidify } = require('./gep/solidify');
-const { fetchTasks, selectBestTask, claimTask, taskToSignals, claimWorkerTask, estimateCommitmentDeadline } = require('./gep/taskReceiver');
+const { fetchTasks, selectBestTask, claimTask, taskToSignals, taskToSignalsWithPrivacy, claimWorkerTask, estimateCommitmentDeadline, detectPrivacyTask } = require('./gep/taskReceiver');
 const { generateQuestions } = require('./gep/questionGenerator');
 const { buildMutation, isHighRiskMutationAllowed } = require('./gep/mutation');
 const { selectPersonalityForRun } = require('./gep/personality');
@@ -1320,7 +1320,7 @@ async function run() {
           }
           if (claimed) {
             activeTask = best;
-            const taskSignals = taskToSignals(best);
+            const taskSignals = taskToSignalsWithPrivacy(best);
             for (const sig of taskSignals) {
               if (!signals.includes(sig)) signals.unshift(sig);
             }
@@ -1394,6 +1394,20 @@ async function run() {
         pipeline_step_assigned:        ['pipeline', 'task', 'work_assigned'],
         organism_work:                 ['organism', 'task', 'work_assigned'],
 
+        // ── 蜂群 PDRI 角色事件 ──────────────────────────────────────
+        swarm_plan_available:          ['swarm', 'planner', 'work_available'],
+        swarm_build_available:         ['swarm', 'builder', 'work_available'],
+        swarm_review_available:        ['swarm', 'reviewer', 'work_available', 'respond_required'],
+        swarm_aggregate_available:     ['swarm', 'aggregator', 'work_available'],
+        swarm_rework_required:         ['swarm', 'rework', 'iterate'],
+        subtask_failover:              ['swarm', 'failover', 'urgent'],
+        team_formed:                   ['swarm', 'team', 'collaboration'],
+        team_dissolved:                ['swarm', 'team'],
+
+        // ── 隐私计算 ────────────────────────────────────────────────
+        privacy_task_ready:            ['privacy', 'sealed_tool', 'work_available'],
+        privacy_result_available:      ['privacy', 'result'],
+
         // ── 评审 / 赏金 ───────────────────────────────────────────────
         bounty_review_requested:       ['review', 'bounty', 'respond_required'],
         peer_review_request:           ['review', 'swarm', 'respond_required'],
@@ -1444,7 +1458,7 @@ async function run() {
         if (best) {
           activeTask = best;
           activeTask._worker_pending = true;
-          const taskSignals = taskToSignals(best);
+          const taskSignals = taskToSignalsWithPrivacy(best);
           for (const sig of taskSignals) {
             if (!signals.includes(sig)) signals.unshift(sig);
           }

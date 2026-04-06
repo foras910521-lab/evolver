@@ -129,9 +129,12 @@ async function main() {
     if (isLoop) {
         // Internal daemon loop (no wrapper required).
         if (!acquireLock()) process.exit(0);
-        process.on('exit', releaseLock);
-        process.on('SIGINT', () => { releaseLock(); process.exit(); });
-        process.on('SIGTERM', () => { releaseLock(); process.exit(); });
+        process.on('exit', () => {
+          releaseLock();
+          try { require('./src/gep/a2aProtocol').stopEventStream(); } catch (e) {}
+        });
+        process.on('SIGINT', () => { releaseLock(); try { require('./src/gep/a2aProtocol').stopEventStream(); } catch (e) {} process.exit(); });
+        process.on('SIGTERM', () => { releaseLock(); try { require('./src/gep/a2aProtocol').stopEventStream(); } catch (e) {} process.exit(); });
         process.on('uncaughtException', (err) => {
           console.error('[FATAL] Uncaught exception:', err && err.stack ? err.stack : String(err));
           releaseLock();
@@ -173,8 +176,9 @@ async function main() {
 
         // Start hub heartbeat (keeps node alive independently of evolution cycles)
         try {
-          const { startHeartbeat } = require('./src/gep/a2aProtocol');
+          const { startHeartbeat, startEventStream } = require('./src/gep/a2aProtocol');
           startHeartbeat();
+          startEventStream();
         } catch (e) {
           console.warn('[Heartbeat] Failed to start: ' + (e.message || e));
         }
