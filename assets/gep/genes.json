@@ -109,7 +109,35 @@
       ],
       "learning_history": [
         "outcome:failed",
-        "outcome:success"
+        "outcome:success",
+        {
+          "at": "2026-04-08T15:38:36.709Z",
+          "outcome": "success",
+          "mode": "none",
+          "reason_class": "unknown",
+          "retryable": false,
+          "learning_signals": [
+            "evolution_stagnation_detected",
+            "stable_success_plateau",
+            "retry_error_context",
+            "retry_cmd:node scripts/validate-suite.js",
+            "retry_stderr:FAIL: test suite exited with code 1\nng commands\n    ok 6 - returns false for missing commands\n      ---\n      duration_m"
+          ]
+        },
+        {
+          "at": "2026-04-08T15:38:43.902Z",
+          "outcome": "success",
+          "mode": "none",
+          "reason_class": "unknown",
+          "retryable": false,
+          "learning_signals": [
+            "evolution_stagnation_detected",
+            "stable_success_plateau",
+            "retry_error_context",
+            "retry_cmd:node scripts/validate-suite.js",
+            "retry_stderr:FAIL: test suite exited with code 1\nng commands\n    ok 6 - returns false for missing commands\n      ---\n      duration_m"
+          ]
+        }
       ],
       "anti_patterns": [
         {
@@ -129,7 +157,12 @@
         }
       ],
       "epigenetic_marks": [
-        "reinforced_by_success"
+        {
+          "context": "darwin/arm64/v22.22.0",
+          "boost": 0.15000000000000002,
+          "reason": "reinforced_by_success",
+          "created_at": "2026-04-08T15:38:43.902Z"
+        }
       ],
       "schema_version": "1.6.0",
       "asset_id": "sha256:96cf6c199c6f296adcb05bd1637e03743411a934bccd3135cdd344668876d74f",
