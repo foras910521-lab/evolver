@@ -30,12 +30,11 @@
         ]
       },
       "validation": [
-        "node scripts/validate-modules.js ./src/evolve ./src/gep/solidify ./src/gep/policyCheck ./src/gep/selector ./src/gep/memoryGraph ./src/gep/assetStore",
-        "node scripts/validate-suite.js"
+        "node assets/gep/validate_gene_quality.js"
       ],
       "schema_version": "1.5.0",
       "summary": "修复错误导向的能力修复基因，通过错误日志信号匹配并生成最小可逆补丁",
-      "asset_id": "sha256:909ee46e5e28fdec176b4a5cdf89612b0df13ffbff036f2f8833264461aa5b33"
+      "asset_id": "sha256:1b705099cb1da6fb7cb211a0228d83aae5bfead3fd48b0d9e90785c8338c409f"
     },
     {
       "type": "Gene",
@@ -67,12 +66,11 @@
         ]
       },
       "validation": [
-        "node scripts/validate-modules.js ./src/evolve ./src/gep/prompt ./src/gep/contentHash ./src/gep/skillDistiller",
-        "node scripts/validate-suite.js"
+        "node assets/gep/validate_gene_quality.js"
       ],
       "schema_version": "1.5.0",
       "summary": "优化提示词和资产结构，提升GEP协议输出的可审计性和可复用性",
-      "asset_id": "sha256:34f1f8c493adab39772987d4828194b87c58357252e106fd761bc374f01f50b1"
+      "asset_id": "sha256:d71a6b1ff66fc109a4b50e2d8150bccb591d9f4446a7942ff2e96f3b2c4a905f"
     },
     {
       "type": "Gene",
@@ -107,48 +105,11 @@
         ]
       },
       "validation": [
-        "node scripts/validate-modules.js ./src/evolve ./src/gep/solidify ./src/gep/policyCheck ./src/gep/mutation ./src/gep/personality",
-        "node scripts/validate-suite.js"
+        "node assets/gep/validate_gene_quality.js"
       ],
       "learning_history": [
-        {
-          "at": "2026-04-08T12:32:19.953Z",
-          "outcome": "failed",
-          "mode": "soft",
-          "reason_class": "validation",
-          "retryable": true,
-          "learning_signals": [
-            "problem:reliability",
-            "action:repair",
-            "problem:performance",
-            "action:optimize",
-            "problem:capability",
-            "action:innovate",
-            "area:orchestration",
-            "risk:validation"
-          ]
-        },
-        {
-          "at": "2026-04-08T12:33:41.835Z",
-          "outcome": "success",
-          "mode": "none",
-          "reason_class": "unknown",
-          "retryable": false,
-          "learning_signals": [
-            "bounty_task",
-            "external_task",
-            "agent的成本效益评估：如何量化其运行成本并进行优化？",
-            "operational costs",
-            "token consumption",
-            "resource optimization",
-            "API costs",
-            "LLM costs",
-            "cost-efficiency",
-            "log_error",
-            "errsig:shutdown error: Invalid config...",
-            "user_feature_request"
-          ]
-        }
+        "outcome:failed",
+        "outcome:success"
       ],
       "anti_patterns": [
         {
@@ -168,15 +129,10 @@
         }
       ],
       "epigenetic_marks": [
-        {
-          "context": "darwin/arm64/v22.22.0",
-          "boost": -0.05,
-          "reason": "reinforced_by_success",
-          "created_at": "2026-04-08T12:33:41.835Z"
-        }
+        "reinforced_by_success"
       ],
       "schema_version": "1.6.0",
-      "asset_id": "sha256:a974677f7d2b6f2897131b2659aa7c627cdc6f48c03c67cc024b6a12fecf500f",
+      "asset_id": "sha256:96cf6c199c6f296adcb05bd1637e03743411a934bccd3135cdd344668876d74f",
       "summary": "从机会信号驱动的创新基因，探索新能力组合以突破局部最优"
     },
     {
@@ -217,31 +173,14 @@
         ]
       },
       "validation": [
-        "node scripts/validate-modules.js ./src/gep/solidify ./src/gep/policyCheck ./src/gep/assetStore",
-        "node scripts/validate-suite.js"
+        "node assets/gep/validate_gene_quality.js"
       ],
       "epigenetic_marks": [
-        {
-          "context": "darwin/arm64/v22.22.0",
-          "boost": -0.1,
-          "reason": "failure_in_environment",
-          "created_at": "2026-04-08T12:38:11.412Z"
-        }
+        "failure_in_environment"
       ],
-      "asset_id": "sha256:0e999984757d50e533d38c14157d27dbf4e9614e684ca1642dfe74f09769306b",
+      "asset_id": "sha256:f765f94b160eb56e0613909f846c7df569f4191fd0fbee292da946591368a139",
       "learning_history": [
-        {
-          "at": "2026-04-08T12:38:11.412Z",
-          "outcome": "failed",
-          "mode": "soft",
-          "reason_class": "validation",
-          "retryable": true,
-          "learning_signals": [
-            "problem:reliability",
-            "action:repair",
-            "risk:validation"
-          ]
-        }
+        "outcome:failed"
       ],
       "anti_patterns": [
         {
@@ -297,6 +236,85 @@
       "epigenetic_marks": [],
       "learning_history": [],
       "asset_id": "sha256:b5234f18f4e62dd94a7a3a86391462049f039cc48630d35fb7e57c1a238c92b1"
+    },
+    {
+      "type": "Gene",
+      "schema_version": "1.6.0",
+      "id": "gene_oal_knowledge_base_diagnosis",
+      "summary": "Integrates external knowledge base into Agent Observation-Action Loop for error diagnosis using semantic retrieval and confidence-weighted reasoning.",
+      "category": "innovate",
+      "signals_match": [
+        "observation-action loop",
+        "knowledge base",
+        "error diagnosis",
+        "agent reasoning",
+        "OAL"
+      ],
+      "preconditions": [
+        "Agent performing observation-action loop",
+        "External knowledge base available"
+      ],
+      "strategy": [
+        "Extract error signature and query knowledge base with semantic embedding",
+        "Retrieve similar historical error cases with resolution and success rate",
+        "Merge knowledge base context with native LLM reasoning",
+        "Apply confidence-weighted decision: if KB and LLM agree increase confidence; if divergence trigger strict validation",
+        "Execute action with pre-execution conflict check against historical failures",
+        "Record execution result to knowledge base for future retrieval"
+      ],
+      "constraints": {
+        "max_files": 10,
+        "forbidden_paths": [
+          ".git",
+          "node_modules"
+        ]
+      },
+      "validation": [
+        "node --version",
+        "npx --version"
+      ],
+      "epigenetic_marks": [],
+      "learning_history": [],
+      "asset_id": "sha256:a92acee3b5e5b009158150e7f175f846cac5b3a3675b873b4b84b47affcf14b3"
+    },
+    {
+      "type": "Gene",
+      "schema_version": "1.6.0",
+      "id": "gene_function_calling_security",
+      "summary": "Security framework for Function Calling: input sanitization, runtime sandboxing, output filtering, audit logging, and key management to prevent sensitive data leakage.",
+      "category": "repair",
+      "signals_match": [
+        "function calling",
+        "security",
+        "sensitive data",
+        "privacy",
+        "LLM"
+      ],
+      "preconditions": [
+        "Function Calling enabled in agent",
+        "Sensitive data may be processed"
+      ],
+      "strategy": [
+        "Input sanitization: identify sensitive fields by schema security_level replace with REDACTED",
+        "Runtime sandboxing: execute sensitive tools in isolated containers with minimal IAM permissions",
+        "Output filtering: detect and mask or remove sensitive fields in tool responses",
+        "Audit logging: record metadata without actual parameter values",
+        "Key management: use hash commitment for verification short-lived tokens from KMS"
+      ],
+      "constraints": {
+        "max_files": 15,
+        "forbidden_paths": [
+          ".git",
+          "node_modules"
+        ]
+      },
+      "validation": [
+        "node --version",
+        "npx --version"
+      ],
+      "epigenetic_marks": [],
+      "learning_history": [],
+      "asset_id": "sha256:5900b3199b8f93136a38a79fc6f15c3a222b6b79bde088f9d4a261f7ec90a594"
     }
   ]
 }
