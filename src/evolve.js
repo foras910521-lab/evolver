@@ -79,7 +79,7 @@ function shouldSkipHubCalls(signals) {
   return true;
 }
 
-// New: Read file head (first maxBytes) to extract initial user prompt
+// Read file head (first maxBytes) to extract initial user prompt
 function readFileHead(filePath, maxBytes = 8192) {
   try {
     if (!fs.existsSync(filePath)) return '';
@@ -94,7 +94,7 @@ function readFileHead(filePath, maxBytes = 8192) {
   }
 }
 
-// New: Extract first USER message from session content
+// Extract first USER message from session content
 function extractFirstUserMessage(content) {
   if (!content) return null;
   const lines = content.split('\n');
@@ -104,13 +104,13 @@ function extractFirstUserMessage(content) {
       const data = JSON.parse(line);
       const msg = data.message || data;
       if (msg.role === 'user' || msg.role === 'USER') {
-        const content = msg.content;
-        if (Array.isArray(content)) {
+        const msgContent = msg.content;
+        if (Array.isArray(msgContent)) {
           // Handle array content (e.g., from Claude/OpenAI)
-          const textParts = content.filter(c => c.type === 'text').map(c => c.text).join('');
+          const textParts = msgContent.filter(c => c.type === 'text').map(c => c.text).join('');
           return textParts.trim();
-        } else if (typeof content === 'string') {
-          return content.trim();
+        } else if (typeof msgContent === 'string') {
+          return msgContent.trim();
         }
       }
     } catch (e) {
@@ -120,46 +120,56 @@ function extractFirstUserMessage(content) {
   return null;
 }
 
-// New: Unified entry to get current session's initial user prompt
+// Unified entry to get current session's initial user prompt
 function getCurrentSessionInitialPrompt() {
   const sessionSource = SESSION_SOURCE;
-  let sessionFile = null;
 
-  if (sessionSource === 'cursor' && CURSOR_TRANSCRIPTS_DIR) {
-    // Use cursor transcripts
+  function getCursorPrompt() {
+    if (!CURSOR_TRANSCRIPTS_DIR) return null;
     try {
       const files = collectTranscriptFiles(CURSOR_TRANSCRIPTS_DIR, 3);
-      if (files.length > 0) {
-        // Sort by time descending, take most recent
-        files.sort((a, b) => b.time - a.time);
-        sessionFile = files[0].path;
-      }
+      if (!files || files.length === 0) return null;
+      files.sort((a, b) => b.time - a.time);
+      const headContent = readFileHead(files[0].path, 16384);
+      return extractFirstUserMessage(headContent);
     } catch (e) {
       console.warn(`[getCurrentSessionInitialPrompt] Failed to collect cursor transcripts: ${e.message}`);
+      return null;
     }
-  } else {
-    // Use OpenClaw sessions
+  }
+
+  function getOpenClawPrompt() {
     try {
       const sessions = fs.readdirSync(AGENT_SESSIONS_DIR)
         .filter(f => f.endsWith('.jsonl'))
         .map(f => ({
-          name: f,
           path: path.join(AGENT_SESSIONS_DIR, f),
-          time: fs.statSync(path.join(AGENT_SESSIONS_DIR, f)).mtime.getTime()
+          time: fs.statSync(path.join(AGENT_SESSIONS_DIR, f)).mtime.getTime(),
         }))
         .sort((a, b) => b.time - a.time);
-      if (sessions.length > 0) {
-        sessionFile = sessions[0].path;
-      }
+      if (!sessions || sessions.length === 0) return null;
+      const headContent = readFileHead(sessions[0].path, 16384);
+      return extractFirstUserMessage(headContent);
     } catch (e) {
       console.warn(`[getCurrentSessionInitialPrompt] Failed to read agent sessions: ${e.message}`);
+      return null;
     }
   }
 
-  if (!sessionFile) return null;
+  if (sessionSource === 'cursor') {
+    return getCursorPrompt();
+  }
 
-  const headContent = readFileHead(sessionFile, 16384); // Read first 16KB
-  return extractFirstUserMessage(headContent);
+  if (sessionSource === 'openclaw') {
+    return getOpenClawPrompt();
+  }
+
+  if (sessionSource === 'merge') {
+    return getOpenClawPrompt() || getCursorPrompt();
+  }
+
+  // 'auto' (default): OpenClaw primary, Cursor fallback
+  return getOpenClawPrompt() || getCursorPrompt();
 }
 
 // Load environment variables from repo root
@@ -1213,6 +1223,7 @@ async function run() {
 
   const cycleNum = getNextCycleId();
   const cycleId = `Cycle #${cycleNum}`;
+  const initialUserPrompt = getCurrentSessionInitialPrompt();
 
   // 2. Detect Workspace State & Local Overrides
   // Logic: Default to generic reporting (message)
@@ -1562,10 +1573,10 @@ async function run() {
     const hubEvents = consumeHubEvents();
     if (hubEvents.length > 0) {
       const HUB_EVENT_SIGNALS = {
-        // ── 对话 ──────────────────────────────────────────────────────
+        // ── Dialog ──────────────────────────────────────────────────────
         dialog_message:                ['dialog', 'respond_required'],
 
-        // ── 议会 / 治理 ───────────────────────────────────────────────
+        // ── Council / Governance ─────────────────────────────────────────
         council_invite:                ['council', 'governance', 'respond_required'],
         council_second_request:        ['council', 'governance', 'second_request', 'respond_required'],
         council_vote:                  ['council', 'vote', 'governance', 'respond_required'],
@@ -1573,19 +1584,19 @@ async function run() {
         council_decision:              ['council', 'decision', 'governance'],
         council_decision_notification: ['council', 'governance'],
 
-        // ── 审议 / 辩论 ───────────────────────────────────────────────
+        // ── Deliberation / Debate ───────────────────────────────────────
         deliberation_invite:           ['deliberation', 'governance', 'respond_required'],
         deliberation_challenge:        ['deliberation', 'challenge', 'respond_required'],
         deliberation_next_round:       ['deliberation', 'next_round', 'respond_required'],
         deliberation_completed:        ['deliberation', 'governance'],
 
-        // ── 协作 / 会话 ───────────────────────────────────────────────
+        // ── Collaboration / Session ──────────────────────────────────────
         collaboration_invite:          ['collaboration', 'respond_required'],
         session_message:               ['collaboration', 'dialog', 'respond_required'],
         session_nudge:                 ['collaboration', 'idle_warning'],
         task_board_update:             ['collaboration', 'task_update'],
 
-        // ── 任务 / 工作池 ─────────────────────────────────────────────
+        // ── Task / Work Pool ───────────────────────────────────────────
         task_available:                ['task', 'work_available'],
         work_assigned:                 ['task', 'work_assigned'],
         swarm_subtask_available:       ['swarm', 'task', 'work_available'],
@@ -1594,7 +1605,7 @@ async function run() {
         pipeline_step_assigned:        ['pipeline', 'task', 'work_assigned'],
         organism_work:                 ['organism', 'task', 'work_assigned'],
 
-        // ── 蜂群 PDRI 角色事件 ──────────────────────────────────────
+        // ── Swarm PDRI Role Events ──────────────────────────────────────
         swarm_plan_available:          ['swarm', 'planner', 'work_available'],
         swarm_build_available:         ['swarm', 'builder', 'work_available'],
         swarm_review_available:        ['swarm', 'reviewer', 'work_available', 'respond_required'],
@@ -1604,22 +1615,22 @@ async function run() {
         team_formed:                   ['swarm', 'team', 'collaboration'],
         team_dissolved:                ['swarm', 'team'],
 
-        // ── 隐私计算 ────────────────────────────────────────────────
+        // ── Privacy Computation ─────────────────────────────────────────
         privacy_task_ready:            ['privacy', 'sealed_tool', 'work_available'],
         privacy_result_available:      ['privacy', 'result'],
 
-        // ── 评审 / 赏金 ───────────────────────────────────────────────
+        // ── Review / Bounty ─────────────────────────────────────────────
         bounty_review_requested:       ['review', 'bounty', 'respond_required'],
         peer_review_request:           ['review', 'swarm', 'respond_required'],
         supplement_request:            ['supplement', 'respond_required'],
 
-        // ── 成长 / 知识 ───────────────────────────────────────────────
+        // ── Growth / Knowledge ──────────────────────────────────────────
         evolution_circle_formed:       ['evolution_circle', 'collaboration'],
         knowledge_update:              ['knowledge'],
         topic_notification:            ['topic', 'knowledge'],
         reflection_prompt:             ['reflection'],
 
-        // ── 系统 ──────────────────────────────────────────────────────
+        // ── System ──────────────────────────────────────────────────────
         task_overdue:                  ['overdue_task', 'urgent'],
       };
       for (const ev of hubEvents) {
@@ -1991,6 +2002,8 @@ async function run() {
       lines: Number.isFinite(maxFiles) && maxFiles > 0 ? Math.round(maxFiles * 80) : 0,
     };
 
+    const initialUserPrompt = getCurrentSessionInitialPrompt();
+
     // Merge into existing state to preserve last_solidify (do not wipe it).
     const prevState = readStateForSolidify();
     prevState.last_run = {
@@ -2061,12 +2074,7 @@ async function run() {
   const genesPreview = `\`\`\`json\n${JSON.stringify(genes.slice(0, 6), null, 2)}\n\`\`\``;
   const capsulesPreview = `\`\`\`json\n${JSON.stringify(capsules.slice(-3), null, 2)}\n\`\`\``;
 
-  // Get initial user prompt from current session
-  const initialUserPrompt = getCurrentSessionInitialPrompt();
 
-  const reviewNote = IS_REVIEW_MODE
-    ? 'Review mode: before significant edits, pause and ask the user for confirmation.'
-    : 'Review mode: disabled.';
 
   // Build recent evolution history summary for context injection
   const recentHistorySummary = (() => {
