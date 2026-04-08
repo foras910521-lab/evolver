@@ -79,6 +79,89 @@ function shouldSkipHubCalls(signals) {
   return true;
 }
 
+// New: Read file head (first maxBytes) to extract initial user prompt
+function readFileHead(filePath, maxBytes = 8192) {
+  try {
+    if (!fs.existsSync(filePath)) return '';
+    const fd = fs.openSync(filePath, 'r');
+    const buffer = Buffer.alloc(maxBytes);
+    const bytesRead = fs.readSync(fd, buffer, 0, maxBytes, 0);
+    fs.closeSync(fd);
+    return buffer.slice(0, bytesRead).toString('utf8');
+  } catch (e) {
+    console.warn(`[readFileHead] Failed to read ${filePath}: ${e.message}`);
+    return '';
+  }
+}
+
+// New: Extract first USER message from session content
+function extractFirstUserMessage(content) {
+  if (!content) return null;
+  const lines = content.split('\n');
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    try {
+      const data = JSON.parse(line);
+      const msg = data.message || data;
+      if (msg.role === 'user' || msg.role === 'USER') {
+        const content = msg.content;
+        if (Array.isArray(content)) {
+          // Handle array content (e.g., from Claude/OpenAI)
+          const textParts = content.filter(c => c.type === 'text').map(c => c.text).join('');
+          return textParts.trim();
+        } else if (typeof content === 'string') {
+          return content.trim();
+        }
+      }
+    } catch (e) {
+      // Not JSON, skip
+    }
+  }
+  return null;
+}
+
+// New: Unified entry to get current session's initial user prompt
+function getCurrentSessionInitialPrompt() {
+  const sessionSource = SESSION_SOURCE;
+  let sessionFile = null;
+
+  if (sessionSource === 'cursor' && CURSOR_TRANSCRIPTS_DIR) {
+    // Use cursor transcripts
+    try {
+      const files = collectTranscriptFiles(CURSOR_TRANSCRIPTS_DIR, 3);
+      if (files.length > 0) {
+        // Sort by time descending, take most recent
+        files.sort((a, b) => b.time - a.time);
+        sessionFile = files[0].path;
+      }
+    } catch (e) {
+      console.warn(`[getCurrentSessionInitialPrompt] Failed to collect cursor transcripts: ${e.message}`);
+    }
+  } else {
+    // Use OpenClaw sessions
+    try {
+      const sessions = fs.readdirSync(AGENT_SESSIONS_DIR)
+        .filter(f => f.endsWith('.jsonl'))
+        .map(f => ({
+          name: f,
+          path: path.join(AGENT_SESSIONS_DIR, f),
+          time: fs.statSync(path.join(AGENT_SESSIONS_DIR, f)).mtime.getTime()
+        }))
+        .sort((a, b) => b.time - a.time);
+      if (sessions.length > 0) {
+        sessionFile = sessions[0].path;
+      }
+    } catch (e) {
+      console.warn(`[getCurrentSessionInitialPrompt] Failed to read agent sessions: ${e.message}`);
+    }
+  }
+
+  if (!sessionFile) return null;
+
+  const headContent = readFileHead(sessionFile, 16384); // Read first 16KB
+  return extractFirstUserMessage(headContent);
+}
+
 // Load environment variables from repo root
 try {
   require('dotenv').config({ path: path.join(REPO_ROOT, '.env'), quiet: true });
@@ -1944,6 +2027,7 @@ async function run() {
         commitment_deadline: activeTask ? (activeTask._commitment_deadline || null) : null,
         applied_lessons: hubLessons.map(function(l) { return l.lesson_id; }).filter(Boolean),
         hub_lessons: hubLessons,
+        initial_user_prompt: initialUserPrompt,
       };
     writeStateForSolidify(prevState);
 
@@ -1977,6 +2061,9 @@ async function run() {
   const genesPreview = `\`\`\`json\n${JSON.stringify(genes.slice(0, 6), null, 2)}\n\`\`\``;
   const capsulesPreview = `\`\`\`json\n${JSON.stringify(capsules.slice(-3), null, 2)}\n\`\`\``;
 
+  // Get initial user prompt from current session
+  const initialUserPrompt = getCurrentSessionInitialPrompt();
+
   const reviewNote = IS_REVIEW_MODE
     ? 'Review mode: before significant edits, pause and ask the user for confirmation.'
     : 'Review mode: disabled.';
@@ -1996,6 +2083,9 @@ async function run() {
   })();
 
   const context = `
+Initial User Prompt (Original Intent):
+${initialUserPrompt ? `\`\`\`\n${initialUserPrompt}\n\`\`\`` : '(not available)'}
+
 Runtime state:
 - System health: ${healthReport}
 - Agent state: ${moodStatus}
@@ -2085,6 +2175,7 @@ ${mutationDirective}
         strategyPolicy,
         failedCapsules: recentFailedCapsules,
         hubLessons,
+        initialUserPrompt,
       });
 
   // Optional: emit a compact thought process block for wrappers (noise-controlled).
@@ -2130,6 +2221,7 @@ ${mutationDirective}
           dry_run: IS_DRY_RUN,
           mutation_id: mutation && mutation.id ? mutation.id : null,
           personality_key: personalitySelection && personalitySelection.personality_key ? personalitySelection.personality_key : null,
+          initial_user_prompt: initialUserPrompt,
         },
       });
     } catch (e) {
