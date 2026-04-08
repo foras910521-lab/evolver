@@ -32,10 +32,7 @@
       "validation": [
         "node scripts/validate-modules.js ./src/evolve ./src/gep/solidify ./src/gep/policyCheck ./src/gep/selector ./src/gep/memoryGraph ./src/gep/assetStore",
         "node scripts/validate-suite.js"
-      ],
-      "schema_version": "1.5.0",
-      "summary": "修复错误导向的能力修复基因，通过错误日志信号匹配并生成最小可逆补丁",
-      "asset_id": "sha256:909ee46e5e28fdec176b4a5cdf89612b0df13ffbff036f2f8833264461aa5b33"
+      ]
     },
     {
       "type": "Gene",
@@ -69,10 +66,7 @@
       "validation": [
         "node scripts/validate-modules.js ./src/evolve ./src/gep/prompt ./src/gep/contentHash ./src/gep/skillDistiller",
         "node scripts/validate-suite.js"
-      ],
-      "schema_version": "1.5.0",
-      "summary": "优化提示词和资产结构，提升GEP协议输出的可审计性和可复用性",
-      "asset_id": "sha256:34f1f8c493adab39772987d4828194b87c58357252e106fd761bc374f01f50b1"
+      ]
     },
     {
       "type": "Gene",
@@ -176,8 +170,7 @@
         }
       ],
       "schema_version": "1.6.0",
-      "asset_id": "sha256:a974677f7d2b6f2897131b2659aa7c627cdc6f48c03c67cc024b6a12fecf500f",
-      "summary": "从机会信号驱动的创新基因，探索新能力组合以突破局部最优"
+      "asset_id": "sha256:a974677f7d2b6f2897131b2659aa7c627cdc6f48c03c67cc024b6a12fecf500f"
     },
     {
       "type": "Gene",
@@ -254,49 +247,7 @@
             "risk:validation"
           ]
         }
-      ],
-      "summary": "自动化生成的本地优化基因"
-    },
-    {
-      "type": "Gene",
-      "schema_version": "1.6.0",
-      "id": "gene_self_correction_explainability",
-      "summary": "Makes Agent Self-Correction explainable by providing error classification, confidence tracking, evidence chain traceback, and pre-correction validation.",
-      "category": "innovate",
-      "signals_match": [
-        "self-correction",
-        "explainable AI",
-        "XAI",
-        "transparency",
-        "reasoning explanation",
-        "agent decision making"
-      ],
-      "preconditions": [
-        "Agent is performing self-correction or self-repair",
-        "User or system requests explanation of correction"
-      ],
-      "strategy": [
-        "Apply error taxonomy: classify error as factual/logical/strategic/boundary",
-        "Compute confidence score for the original decision",
-        "Build three-layer explanation: what (error type), why (root cause), how (fix strategy)",
-        "Generate counterfactual: what would happen without correction",
-        "Estimate pre-correction validation: does fix benefit exceed cost?",
-        "Output structured explanation with evidence chain"
-      ],
-      "constraints": {
-        "max_files": 10,
-        "forbidden_paths": [
-          ".git",
-          "node_modules"
-        ]
-      },
-      "validation": [
-        "node --version",
-        "npx --version"
-      ],
-      "epigenetic_marks": [],
-      "learning_history": [],
-      "asset_id": "sha256:b5234f18f4e62dd94a7a3a86391462049f039cc48630d35fb7e57c1a238c92b1"
+      ]
     }
   ]
 }

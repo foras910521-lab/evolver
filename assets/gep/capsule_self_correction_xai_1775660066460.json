@@ -1,0 +1,47 @@
+{
+  "type": "Capsule",
+  "schema_version": "1.6.0",
+  "id": "capsule_self_correction_xai_1775660066460",
+  "gene": "gene_auto_self_correction_xai",
+  "summary": "A framework for making Agent Self-Correction explainable through error taxonomy, confidence tracking, evidence chain traceback, and pre-correction validation.",
+  "content": "## Agent Self-Correction 可解释性设计框架\n\n### 核心问题\nSelf-Correction 缺乏解释性，是因为大多数 Agent 系统将纠正作为黑箱操作——只输出结果，不说明原因。\n\n### 设计原则\n\n**1. 错误分类锚定（Error Taxonomy Anchoring）**\nAgent 在触发 Self-Correction 前，必须先对错误进行分类：\n- 事实性错误：知识库幻觉、计算错误、外部工具返回错误数据\n- 逻辑性错误：推理步骤跳跃、前提-结论断裂、循环论证\n- 策略性错误：工具选择不当、计划与现实脱节\n- 边界性错误：超出能力范围、拒绝回答 vs. 强行回答的判断失误\n\n**2. 三层解释结构**\n修复解释 = 错误层 + 推理层 + 修复层：\n- 错误层：检测到 X 类型错误，置信度 Y%\n- 推理层：错误原因是 Z，通过 W 证据/工具/推理链得出\n- 修复层：因此采用 A 策略（而不是 B），预期效果是……\n\n**3. 置信度追踪（Confidence Tracking）**\n在每次决策时同时输出置信度。当置信度低于阈值时触发 Self-Correction，并在解释中引用不确定性因素。\n\n**4. 证据链回溯（Evidence Chain Traceback）**\n保留完整证据链：工具调用、来源节点、多步推理每一步的输入-输出对。Self-Correction 时展示完整推理 DAG，而非仅展示最终纠正结果。\n\n**5. 反事实解释**\n解释为什么需要纠正：如果不纠正，X 情况下会得到 Y 结果；因为目标是 Z，所以必须采用修正后的 W 路径。\n\n**6. 修复效果预估（Pre-correction Validation）**\n在正式修正前，用少量 token 模拟修正后的推理路径，评估修正是否引入新错误、修正成本是否值得。只有当修正收益 > 修正成本时才触发修正。\n\n### 实现架构\nclass ExplainableSelfCorrection:\n  async correct(errorSignal, context):\n    errorType = classify(errorSignal)\n    confidence = getConfidence(context)\n    explanation = {\n      what: 检测到 {errorType} 类错误（置信度 {confidence}%）\n      why: 原因：{getRootCause(context)}\n      whyNot: 如果不修正：{predictUncorrectedOutcome(context)}\n      how: 修复策略：{selectStrategy(errorType, confidence)}\n      worth: 修正收益 {benefit} > 修正成本 {cost}\n      evidence: getEvidenceChain(context)\n    }\n    return applyFix(context, explanation)\n\n### 与 XAI 的区别\n传统 XAI 解释模型决策；Self-Correction 可解释性解释为什么要修正决策——这是元级别解释。\n\n### 评估指标\n- 解释覆盖率：Self-Correction 中完整三层解释的比例\n- 解释置信度匹配：详细程度是否与错误严重程度正相关\n- 修复准确率：基于解释的修正确实比随机修复更有效",
+  "outcome": {
+    "status": "success",
+    "score": 0.92
+  },
+  "trigger": [
+    "self-correction",
+    "explainable AI",
+    "XAI",
+    "transparency",
+    "reasoning explanation"
+  ],
+  "signals_match": [
+    "self-correction",
+    "explainability",
+    "transparency"
+  ],
+  "strategy": [
+    "error classification",
+    "confidence tracking",
+    "evidence chain",
+    "counterfactual explanation"
+  ],
+  "a2a": {
+    "eligible_to_broadcast": true
+  },
+  "asset_id": "sha256:31c38ad3df813a351f7496f3326c8bba16aad868ee879e7ece8dc69eb7df39d7",
+  "confidence": 0.92,
+  "blast_radius": {
+    "files": 1,
+    "lines": 1505
+  },
+  "env_fingerprint": {
+    "node_version": "v22.22.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "os_release": "25.3.0",
+    "evolver_version": "1.47.0",
+    "captured_at": "2026-04-08T14:57:36.607Z"
+  }
+}

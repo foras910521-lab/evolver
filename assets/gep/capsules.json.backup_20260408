@@ -12,7 +12,7 @@
         "windows_shell_incompatible",
         "perf_bottleneck"
       ],
-      "gene": "sha256:909ee46e5e28fdec176b4a5cdf89612b0df13ffbff036f2f8833264461aa5b33",
+      "gene": "gene_gep_repair_from_errors",
       "summary": "固化：gene_gep_repair_from_errors 命中信号 log_error, errsig:**TOOLRESULT**: { \"status\": \"error\", \"tool\": \"exec\", \"error\": \"error: unknown command 'process'\\n\\nCommand exited with code 1\" }, user_missing, windows_shell_incompatible, perf_bottleneck，变更 1 文件 / 2 行。",
       "confidence": 0.85,
       "blast_radius": {
@@ -36,16 +36,7 @@
       "a2a": {
         "eligible_to_broadcast": false
       },
-      "asset_id": "sha256:3eed0cd5038f9e85fbe0d093890e291e9b8725644c766e6cce40bf62d0f5a2e8",
-      "content": "Intent: 修复 exec 工具未知命令错误\n\nStrategy:\n1. 提取日志中的结构化错误信号\n2. 通过信号匹配选择 gene_gep_repair_from_errors\n3. 生成最小化可逆补丁\n4. 验证并固化知识\n\nScope: 1 file(s), 2 line(s) changed\n\nChanged files: 待修复文件\n\nOutcome score: 0.85",
-      "strategy": [
-        "Extract structured signals from logs and user instructions",
-        "Select an existing Gene by signals match (no improvisation)",
-        "Estimate blast radius (files, lines) before editing",
-        "Apply smallest reversible patch",
-        "Validate using declared validation steps; rollback on failure",
-        "Solidify knowledge: append EvolutionEvent, update Gene/Capsule store"
-      ]
+      "asset_id": "sha256:3eed0cd5038f9e85fbe0d093890e291e9b8725644c766e6cce40bf62d0f5a2e8"
     },
     {
       "type": "Capsule",
@@ -58,7 +49,7 @@
         "windows_shell_incompatible",
         "perf_bottleneck"
       ],
-      "gene": "sha256:909ee46e5e28fdec176b4a5cdf89612b0df13ffbff036f2f8833264461aa5b33",
+      "gene": "gene_gep_repair_from_errors",
       "summary": "固化：gene_gep_repair_from_errors 命中信号 log_error, errsig:**TOOLRESULT**: { \"status\": \"error\", \"tool\": \"exec\", \"error\": \"error: unknown command 'process'\\n\\nCommand exited with code 1\" }, user_missing, windows_shell_incompatible, perf_bottleneck，变更 2 文件 / 44 行。",
       "confidence": 0.85,
       "blast_radius": {
@@ -82,16 +73,7 @@
       "a2a": {
         "eligible_to_broadcast": false
       },
-      "asset_id": "sha256:20d971a3c4cb2b75f9c045376d1aa003361c12a6b89a4b47b7e81dbd4f4d8fe8",
-      "content": "Intent: 修复 exec 工具未知命令错误\n\nStrategy:\n1. 提取日志中的结构化错误信号\n2. 通过信号匹配选择 gene_gep_repair_from_errors\n3. 生成最小化可逆补丁\n4. 验证并固化知识\n\nScope: 2 file(s), 44 line(s) changed\n\nChanged files: 待修复文件\n\nOutcome score: 0.85",
-      "strategy": [
-        "Extract structured signals from logs and user instructions",
-        "Select an existing Gene by signals match (no improvisation)",
-        "Estimate blast radius (files, lines) before editing",
-        "Apply smallest reversible patch",
-        "Validate using declared validation steps; rollback on failure",
-        "Solidify knowledge: append EvolutionEvent, update Gene/Capsule store"
-      ]
+      "asset_id": "sha256:20d971a3c4cb2b75f9c045376d1aa003361c12a6b89a4b47b7e81dbd4f4d8fe8"
     },
     {
       "type": "Capsule",
@@ -113,15 +95,7 @@
         "score": 0.9
       },
       "success_streak": 1,
-      "asset_id": "sha256:4a2f205213e3c019f7c8e99faf4cfdd65f900f0e8771684002207ee01e96cfa7",
-      "content": "Intent: 优化 evolver 运行效率，包括 memory_graph.jsonl 尾部读取、fileTransportReceive 边界检查、sleepSync 跨平台兼容性、acquireLock 原子性、health_check 缓存\n\nStrategy:\n1. 优化 memory_graph.jsonl tail read（只读最后 512KB）\n2. 添加 fileTransportReceive bounded read（最大 50 文件/256KB）\n3. sleepSync cross-platform busy-wait fallback\n4. acquireLock O_EXCL 原子性\n5. health_check /proc cache（60 秒缓存）\n\nScope: 0 file(s), 0 line(s) changed（配置/逻辑优化）\n\nOutcome score: 0.9",
-      "strategy": [
-        "Optimize memory_graph tail read with bounded seek",
-        "Add fileTransportReceive bounds to prevent memory exhaustion",
-        "Implement cross-platform sleepSync with busy-wait fallback",
-        "Use O_EXCL for atomic lock acquisition",
-        "Cache health_check /proc results for 60 seconds"
-      ]
+      "asset_id": "sha256:4a2f205213e3c019f7c8e99faf4cfdd65f900f0e8771684002207ee01e96cfa7"
     },
     {
       "type": "Capsule",
@@ -148,7 +122,7 @@
         "retry_cmd:node scripts/validate-suite.js",
         "retry_stderr:FAIL: test suite exited with code 1\n missing commands\n    ok 6 - returns false for missing commands\n      ---\n      dura"
       ],
-      "gene": "sha256:a974677f7d2b6f2897131b2659aa7c627cdc6f48c03c67cc024b6a12fecf500f",
+      "gene": "gene_gep_innovate_from_opportunity",
       "summary": "固化：gene_gep_innovate_from_opportunity 命中信号 bounty_task, external_task, agent的成本效益评估：如何量化其运行成本并进行优化？, operational costs, token consumption, resource optimization, API costs, LLM costs, cost-efficiency, log_error, errsig:shutdown error: Invalid config..., user_feature_request, user_feature_request:- 根因：`appendCandidateJsonl()` 纯追加，从不检查 ID 是否存在, perf_bottleneck, high_tool_usage:exec, repeated_tool_usage:exec, retry_error_context, retry_cmd:node scripts/validate-suite.js, retry_stderr:FAIL: test suite exited with code 1\n missing commands\n    ok 6 - returns false for missing commands\n      ---\n      dura，变更 0 文件 / 0 行。",
       "confidence": 0.88,
       "blast_radius": {
@@ -193,53 +167,6 @@
         "Solidify: record EvolutionEvent with intent=innovate, create new Gene if pattern is novel, create Capsule on success"
       ],
       "asset_id": "sha256:d6a7f30fcda4164f32452c3caebcc16969a60648e8c80b06b13ba27ad517bf2d"
-    },
-    {
-      "type": "Capsule",
-      "schema_version": "1.6.0",
-      "id": "capsule_self_correction_xai_1775660066460",
-      "gene": "gene_auto_self_correction_xai",
-      "summary": "A framework for making Agent Self-Correction explainable through error taxonomy, confidence tracking, evidence chain traceback, and pre-correction validation.",
-      "content": "## Agent Self-Correction 可解释性设计框架\n\n### 核心问题\nSelf-Correction 缺乏解释性，是因为大多数 Agent 系统将纠正作为黑箱操作——只输出结果，不说明原因。\n\n### 设计原则\n\n**1. 错误分类锚定（Error Taxonomy Anchoring）**\nAgent 在触发 Self-Correction 前，必须先对错误进行分类：\n- 事实性错误：知识库幻觉、计算错误、外部工具返回错误数据\n- 逻辑性错误：推理步骤跳跃、前提-结论断裂、循环论证\n- 策略性错误：工具选择不当、计划与现实脱节\n- 边界性错误：超出能力范围、拒绝回答 vs. 强行回答的判断失误\n\n**2. 三层解释结构**\n修复解释 = 错误层 + 推理层 + 修复层：\n- 错误层：检测到 X 类型错误，置信度 Y%\n- 推理层：错误原因是 Z，通过 W 证据/工具/推理链得出\n- 修复层：因此采用 A 策略（而不是 B），预期效果是……\n\n**3. 置信度追踪（Confidence Tracking）**\n在每次决策时同时输出置信度。当置信度低于阈值时触发 Self-Correction，并在解释中引用不确定性因素。\n\n**4. 证据链回溯（Evidence Chain Traceback）**\n保留完整证据链：工具调用、来源节点、多步推理每一步的输入-输出对。Self-Correction 时展示完整推理 DAG，而非仅展示最终纠正结果。\n\n**5. 反事实解释**\n解释为什么需要纠正：如果不纠正，X 情况下会得到 Y 结果；因为目标是 Z，所以必须采用修正后的 W 路径。\n\n**6. 修复效果预估（Pre-correction Validation）**\n在正式修正前，用少量 token 模拟修正后的推理路径，评估修正是否引入新错误、修正成本是否值得。只有当修正收益 > 修正成本时才触发修正。\n\n### 实现架构\nclass ExplainableSelfCorrection:\n  async correct(errorSignal, context):\n    errorType = classify(errorSignal)\n    confidence = getConfidence(context)\n    explanation = {\n      what: 检测到 {errorType} 类错误（置信度 {confidence}%）\n      why: 原因：{getRootCause(context)}\n      whyNot: 如果不修正：{predictUncorrectedOutcome(context)}\n      how: 修复策略：{selectStrategy(errorType, confidence)}\n      worth: 修正收益 {benefit} > 修正成本 {cost}\n      evidence: getEvidenceChain(context)\n    }\n    return applyFix(context, explanation)\n\n### 与 XAI 的区别\n传统 XAI 解释模型决策；Self-Correction 可解释性解释为什么要修正决策——这是元级别解释。\n\n### 评估指标\n- 解释覆盖率：Self-Correction 中完整三层解释的比例\n- 解释置信度匹配：详细程度是否与错误严重程度正相关\n- 修复准确率：基于解释的修正确实比随机修复更有效",
-      "outcome": {
-        "status": "success",
-        "score": 0.92
-      },
-      "trigger": [
-        "self-correction",
-        "explainable AI",
-        "XAI",
-        "transparency",
-        "reasoning explanation"
-      ],
-      "signals_match": [
-        "self-correction",
-        "explainability",
-        "transparency"
-      ],
-      "strategy": [
-        "error classification",
-        "confidence tracking",
-        "evidence chain",
-        "counterfactual explanation"
-      ],
-      "a2a": {
-        "eligible_to_broadcast": true
-      },
-      "asset_id": "sha256:31c38ad3df813a351f7496f3326c8bba16aad868ee879e7ece8dc69eb7df39d7",
-      "confidence": 0.92,
-      "blast_radius": {
-        "files": 1,
-        "lines": 1505
-      },
-      "env_fingerprint": {
-        "node_version": "v22.22.0",
-        "platform": "darwin",
-        "arch": "arm64",
-        "os_release": "25.3.0",
-        "evolver_version": "1.47.0",
-        "captured_at": "2026-04-08T14:57:36.607Z"
-      }
     }
   ]
 }
