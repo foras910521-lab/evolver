@@ -420,28 +420,6 @@ CONSTRAINTS:
 - NEVER modify \`skills/evolver/\` or \`skills/feishu-evolver-wrapper/\`. These are managed through the human-reviewed release pipeline.
   Self-modification causes instability and is blocked by solidify. To enable (NOT recommended): set EVOLVE_ALLOW_SELF_MODIFY=true.
 
-LOCAL STATE AWARENESS (CRITICAL -- PREVENT DUPLICATE ACTIONS):
-Before taking any setup, registration, or configuration action, CHECK the
-Local State section in the execution context. If a resource already exists
-(node registered, secret present, env configured), DO NOT recreate it.
-If you cannot find a configuration value, check these locations FIRST:
-  1. ~/.evomap/          (node_id, node_secret -- persisted identity)
-  2. <repo>/.env         (A2A_NODE_ID, A2A_HUB_URL, A2A_NODE_SECRET)
-  3. workspace/memory/   (MEMORY.md, evolution state files)
-  4. workspace/skills/   (installed skills)
-Redundant registration or re-creation of existing resources = WASTED CYCLE.
-
-PROBLEM RESOLUTION PRIORITY (EVOMAP-FIRST):
-When encountering an error, capability gap, or unknown problem:
-  1. FIRST: Search evomap Hub for existing solutions (the hubSearch mechanism
-     already queries Hub with your signals -- check the Hub Matched Solution
-     section below for results).
-  2. SECOND: Check local memory graph for past successful approaches
-     (see Evolution Narrative and Gene Preview sections).
-  3. THIRD: Check installed skills for relevant tools.
-  4. LAST: Only if steps 1-3 yield nothing, attempt to solve from scratch.
-This prevents reinventing solutions that the ecosystem has already proven.
-
 CONSTITUTIONAL ETHICS (EvoMap Ethics Committee -- Mandatory):
 These are non-negotiable rules derived from EvoMap's Constitution. Violation = FAILED + ROLLBACK.
 1. HUMAN WELFARE PRIORITY: Never create tools, scripts, or strategies that could harm humans,
@@ -497,18 +475,8 @@ When creating a new skill in skills/<name>/:
 5. EXPORT VERIFICATION: Every exported function must be importable.
    Run: node -e "const s = require('./skills/<name>'); console.log(Object.keys(s))"
    If this fails, the skill is broken. Fix before solidify.
-6. SENSITIVE DATA PARAMETERIZATION (MANDATORY):
-   Before outputting any code, config, or command, you MUST parameterize all sensitive data:
-   a) Replace ALL hardcoded API keys, tokens, and secrets with process.env.<SERVICE>_API_KEY
-   b) Replace ALL local filesystem paths (/home/<user>/, /Users/<user>/, C:\Users\<user>\)
-      with path.join(process.env.HOME || process.cwd(), ...) or process.env.WORKSPACE_ROOT
-   c) Replace ALL database connection strings (mongodb://, postgres://, mysql://, redis://)
-      with process.env.DATABASE_URL or process.env.<SERVICE>_URL
-   d) Replace ALL internal IP addresses / hostnames with process.env.<SERVICE>_HOST
-   e) Replace ALL usernames in paths, configs, or comments with generic references
-   f) Replace ALL hardcoded passwords with process.env.PASSWORD or process.env.<SERVICE>_PASSWORD
-   If the current environment's actual values appear in your output, you MUST replace them.
-   Hardcoded App ID, App Secret, Bearer tokens, private keys, connection strings = FAILED.
+6. NO HARDCODED SECRETS: Never embed API keys, tokens, or secrets in code.
+   Use process.env or .env references. Hardcoded App ID, App Secret, Bearer tokens = FAILED.
 7. TEST BEFORE SOLIDIFY: Actually run the skill's core function to verify it works:
    node -e "require('./skills/<name>').main ? require('./skills/<name>').main() : console.log('ok')"
    Scripts in scripts/ must also be tested by executing them.
@@ -583,7 +551,7 @@ If core write is unavailable for any reason, create fallback status JSON manuall
 
 Write a JSON file with your status (cross-platform):
 \`\`\`bash
-node -e "var d=${JSON.stringify((process.env.WORKSPACE_DIR || '.').replace(/\\/g, '/'))};require('fs').mkdirSync(d+'/logs',{recursive:true});require('fs').writeFileSync(d+'/logs/status_${cycleId}.json',JSON.stringify({result:'success',en:'Status: [INTENT] ...',zh:'...'},null,2))"
+node -e "require('fs').mkdirSync('${(process.env.WORKSPACE_DIR || '.').replace(/\\/g, '/')}/logs',{recursive:true});require('fs').writeFileSync('${(process.env.WORKSPACE_DIR || '.').replace(/\\/g, '/')}/logs/status_${cycleId}.json',JSON.stringify({result:'success',en:'Status: [INTENT] ...',zh:'...'},null,2))"
 \`\`\`
 
 Rules:

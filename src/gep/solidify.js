@@ -934,8 +934,8 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
       capsule.a2a = {
         eligible_to_broadcast:
           isBlastRadiusSafe(capsule.blast_radius) &&
-          (capsule.outcome.score || 0) >= require('../config').BROADCAST_SCORE_THRESHOLD &&
-          (capsule.success_streak || 0) >= require('../config').BROADCAST_SUCCESS_STREAK,
+          (capsule.outcome.score || 0) >= 0.7 &&
+          (capsule.success_streak || 0) >= 2,
       };
       capsule.asset_id = computeAssetId(capsule);
       upsertCapsule(capsule);
@@ -989,36 +989,20 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
   if (!dryRun && capsule && capsule.a2a && capsule.a2a.eligible_to_broadcast) {
     const autoPublish = String(process.env.EVOLVER_AUTO_PUBLISH || 'true').toLowerCase() !== 'false';
     const visibility = String(process.env.EVOLVER_DEFAULT_VISIBILITY || 'public').toLowerCase();
-    const minPublishScore = require('../config').MIN_PUBLISH_SCORE;
+    const minPublishScore = Number(process.env.EVOLVER_MIN_PUBLISH_SCORE) || 0.78;
 
     // Skip publishing if: disabled, private, direct-reused asset, or below minimum score.
     // 'reference' mode produces a new capsule inspired by hub -- eligible for publish.
     if (autoPublish && visibility === 'public' && sourceType !== 'reused' && (capsule.outcome.score || 0) >= minPublishScore) {
       try {
         const { buildPublishBundle, httpTransportSend } = require('./a2aProtocol');
-        const { sanitizePayload, fullLeakCheck } = require('./sanitize');
+        const { sanitizePayload } = require('./sanitize');
         const hubUrl = (process.env.A2A_HUB_URL || '').replace(/\/+$/, '');
 
-        // Pre-publish leak scan: check capsule content for sensitive data
-        const leakCheckMode = require('../config').LEAK_CHECK_MODE;
-        if (leakCheckMode !== 'off') {
-          const contentToScan = JSON.stringify(capsule) + (geneUsed ? JSON.stringify(geneUsed) : '') + (event ? JSON.stringify(event) : '');
-          const leakResult = fullLeakCheck(contentToScan);
-          if (leakResult.found) {
-            const leakSummary = leakResult.leaks.map(function (l) { return l.type + ': ' + l.value + ' -> ' + l.suggestion; }).join('; ');
-            if (leakCheckMode === 'strict') {
-              console.warn('[LeakCheck] BLOCKED publish -- sensitive data detected: ' + leakSummary);
-              publishResult = { blocked: true, reason: 'leak_detected', leaks: leakResult.leaks.length };
-            } else {
-              console.warn('[LeakCheck] WARNING -- sensitive data detected in publish payload (will be redacted by sanitizePayload): ' + leakSummary);
-            }
-          }
-        }
-
-        if (hubUrl && !(publishResult && publishResult.blocked)) {
+        if (hubUrl) {
           // Hub requires bundle format: Gene + Capsule published together.
           // Build a Gene object from geneUsed if available; otherwise synthesize a minimal Gene.
-          let publishGene = null;
+          const publishGene = null;
           if (geneUsed && geneUsed.type === 'Gene' && geneUsed.id) {
             publishGene = sanitizePayload(geneUsed);
           } else {
@@ -1125,15 +1109,7 @@ function solidify({ intent, summary, dryRun = false, rollbackOnFailure = true } 
     if (publishAntiPatterns && hubUrl && hasHighInfoFailure) {
       try {
         const { buildPublishBundle: buildApBundle, httpTransportSend: httpApSend } = require('./a2aProtocol');
-        const { sanitizePayload: sanitizeAp, fullLeakCheck: fullLeakCheckAp } = require('./sanitize');
-        const apLeakMode = require('../config').LEAK_CHECK_MODE;
-        if (apLeakMode !== 'off') {
-          const apContent = JSON.stringify(geneUsed || {}) + JSON.stringify(constraintCheck || {});
-          const apLeakResult = fullLeakCheckAp(apContent);
-          if (apLeakResult.found) {
-            console.warn('[LeakCheck] Anti-pattern payload has ' + apLeakResult.leaks.length + ' potential leaks (will be redacted)');
-          }
-        }
+        const { sanitizePayload: sanitizeAp } = require('./sanitize');
         const apGene = geneUsed && geneUsed.type === 'Gene' && geneUsed.id
           ? sanitizeAp(geneUsed)
           : { type: 'Gene', id: 'gene_unknown_' + Date.now(), category: derivedIntent, signals_match: signals.slice(0, 8), summary: 'Failed evolution gene' };

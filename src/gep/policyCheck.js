@@ -72,13 +72,10 @@ function matchAnyExact(rel, exacts) {
   return set.has(rel);
 }
 
-const { MAX_REGEX_PATTERN_LEN, SOLIDIFY_MAX_RETRIES: _CFG_MAX_RETRIES, SOLIDIFY_RETRY_INTERVAL_MS, VALIDATION_TIMEOUT_MS: _CFG_VALIDATION_TIMEOUT, CANARY_TIMEOUT_MS: _CFG_CANARY_TIMEOUT } = require('../config');
 function matchAnyRegex(rel, regexList) {
   for (const raw of Array.isArray(regexList) ? regexList : []) {
     try {
-      const s = String(raw);
-      if (s.length > MAX_REGEX_PATTERN_LEN) continue;
-      if (new RegExp(s, 'i').test(rel)) return true;
+      if (new RegExp(String(raw), 'i').test(rel)) return true;
     } catch (_) {
       console.warn('[policyCheck] matchAnyRegex invalid pattern:', raw, _ && _.message || _);
     }
@@ -391,11 +388,11 @@ function isValidationCommandAllowed(cmd) {
   return true;
 }
 
-var MAX_VALIDATION_RETRIES = _CFG_MAX_RETRIES;
+var MAX_VALIDATION_RETRIES = parseInt(process.env.SOLIDIFY_MAX_RETRIES || '2', 10) || 0;
 
 function runValidationsOnce(gene, opts) {
   const repoRoot = opts.repoRoot || getRepoRoot();
-  const timeoutMs = Number.isFinite(Number(opts.timeoutMs)) ? Number(opts.timeoutMs) : _CFG_VALIDATION_TIMEOUT;
+  const timeoutMs = Number.isFinite(Number(opts.timeoutMs)) ? Number(opts.timeoutMs) : 180000;
   const validation = Array.isArray(gene && gene.validation) ? gene.validation : [];
   const results = [];
   const startedAt = Date.now();
@@ -414,13 +411,8 @@ function runValidationsOnce(gene, opts) {
 }
 
 function sleepSync(ms) {
-  const t = Math.max(0, ms);
-  try {
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, t);
-  } catch (_) {
-    const end = Date.now() + t;
-    while (Date.now() < end) { /* busy wait fallback */ }
-  }
+  var end = Date.now() + ms;
+  while (Date.now() < end) {}
 }
 
 function runValidations(gene, opts = {}) {
@@ -440,8 +432,8 @@ function runValidations(gene, opts = {}) {
     if (blocked) break;
     attempt++;
     if (attempt <= maxRetries) {
-      console.log('[Solidify] Validation failed (attempt ' + attempt + '/' + (maxRetries + 1) + '), retrying in ' + SOLIDIFY_RETRY_INTERVAL_MS + 'ms...');
-      sleepSync(SOLIDIFY_RETRY_INTERVAL_MS);
+      console.log('[Solidify] Validation failed (attempt ' + attempt + '/' + (maxRetries + 1) + '), retrying in 1s...');
+      sleepSync(1000);
     }
   }
   result.retries_attempted = attempt > 0 ? attempt - 1 : 0;
@@ -450,7 +442,7 @@ function runValidations(gene, opts = {}) {
 
 function runCanaryCheck(opts) {
   const repoRoot = (opts && opts.repoRoot) ? opts.repoRoot : getRepoRoot();
-  const timeoutMs = (opts && Number.isFinite(Number(opts.timeoutMs))) ? Number(opts.timeoutMs) : _CFG_CANARY_TIMEOUT;
+  const timeoutMs = (opts && Number.isFinite(Number(opts.timeoutMs))) ? Number(opts.timeoutMs) : 30000;
   const canaryScript = path.join(repoRoot, 'src', 'canary.js');
   if (!fs.existsSync(canaryScript)) {
     return { ok: true, skipped: true, reason: 'canary.js not found' };

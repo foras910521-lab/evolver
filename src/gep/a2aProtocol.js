@@ -142,11 +142,9 @@ function buildPublish(opts) {
   if (!asset || !asset.type || !asset.id) {
     throw new Error('publish: asset must have type and id');
   }
+  // Generate signature: HMAC-SHA256 of asset_id with node secret
   const assetIdVal = asset.asset_id || computeAssetId(asset);
-  const nodeSecret = getHubNodeSecret();
-  if (!nodeSecret) {
-    throw new Error('publish: node_secret is required for signing. Run hello first to obtain one.');
-  }
+  const nodeSecret = process.env.A2A_NODE_SECRET || getNodeId();
   const signature = crypto.createHmac('sha256', nodeSecret).update(assetIdVal).digest('hex');
   return buildMessage({
     messageType: 'publish',
@@ -182,10 +180,7 @@ function buildPublishBundle(opts) {
   capsule.asset_id = computeAssetId(capsule);
   const geneAssetId = gene.asset_id;
   const capsuleAssetId = capsule.asset_id;
-  const nodeSecret = getHubNodeSecret();
-  if (!nodeSecret) {
-    throw new Error('publishBundle: node_secret is required for signing. Run hello first to obtain one.');
-  }
+  const nodeSecret = process.env.A2A_NODE_SECRET || getNodeId();
   const signatureInput = [geneAssetId, capsuleAssetId].sort().join('|');
   const signature = crypto.createHmac('sha256', nodeSecret).update(signatureInput).digest('hex');
   const assets = [gene, capsule];
@@ -332,29 +327,11 @@ function fileTransportReceive(opts) {
   const dir = (opts && opts.dir) || defaultA2ADir();
   const subdir = path.join(dir, 'inbox');
   if (!fs.existsSync(subdir)) return [];
-  const MAX_FILES = 50;
-  const MAX_FILE_BYTES = 256 * 1024;
-  const files = fs.readdirSync(subdir).filter(function (f) { return f.endsWith('.jsonl'); }).slice(0, MAX_FILES);
+  const files = fs.readdirSync(subdir).filter(function (f) { return f.endsWith('.jsonl'); });
   const messages = [];
   for (let fi = 0; fi < files.length; fi++) {
     try {
-      const filePath = path.join(subdir, files[fi]);
-      const stat = fs.statSync(filePath);
-      let raw;
-      if (stat.size <= MAX_FILE_BYTES) {
-        raw = fs.readFileSync(filePath, 'utf8');
-      } else {
-        const fd = fs.openSync(filePath, 'r');
-        try {
-          const buf = Buffer.alloc(MAX_FILE_BYTES);
-          fs.readSync(fd, buf, 0, MAX_FILE_BYTES, stat.size - MAX_FILE_BYTES);
-          raw = buf.toString('utf8');
-          const firstNl = raw.indexOf('\n');
-          if (firstNl >= 0) raw = raw.slice(firstNl + 1);
-        } finally {
-          fs.closeSync(fd);
-        }
-      }
+      const raw = fs.readFileSync(path.join(subdir, files[fi]), 'utf8');
       const lines = raw.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
       for (let li = 0; li < lines.length; li++) {
         try {
@@ -383,26 +360,21 @@ function fileTransportList(opts) {
 function httpTransportSend(message, opts) {
   const hubUrl = (opts && opts.hubUrl) || process.env.A2A_HUB_URL;
   if (!hubUrl) return { ok: false, error: 'A2A_HUB_URL not set' };
-  const timeoutMs = (opts && opts.timeoutMs) || require('../config').HTTP_TRANSPORT_TIMEOUT_MS;
   const endpoint = hubUrl.replace(/\/+$/, '') + '/a2a/' + message.message_type;
   const body = JSON.stringify(message);
   return fetch(endpoint, {
     method: 'POST',
     headers: buildHubHeaders(),
     body: body,
-    signal: AbortSignal.timeout(timeoutMs),
   })
-    .then(function (res) {
-      if (!res.ok) return res.text().then(function (t) { return { ok: false, error: 'HTTP ' + res.status + ': ' + t.slice(0, 200) }; });
-      return res.json().then(function (data) { return { ok: true, response: data }; });
-    })
+    .then(function (res) { return res.json(); })
+    .then(function (data) { return { ok: true, response: data }; })
     .catch(function (err) { return { ok: false, error: err.message }; });
 }
 
 function httpTransportReceive(opts) {
   const hubUrl = (opts && opts.hubUrl) || process.env.A2A_HUB_URL;
   if (!hubUrl) return Promise.resolve([]);
-  const timeoutMs = (opts && opts.timeoutMs) || require('../config').HTTP_TRANSPORT_TIMEOUT_MS;
   const assetType = (opts && opts.assetType) || null;
   const signals = (opts && Array.isArray(opts.signals)) ? opts.signals : null;
   const fetchMsg = buildFetch({ assetType: assetType, signals: signals });
@@ -411,12 +383,8 @@ function httpTransportReceive(opts) {
     method: 'POST',
     headers: buildHubHeaders(),
     body: JSON.stringify(fetchMsg),
-    signal: AbortSignal.timeout(timeoutMs),
   })
-    .then(function (res) {
-      if (!res.ok) { console.warn('[a2aProtocol] httpTransportReceive HTTP ' + res.status); return { payload: { results: [] } }; }
-      return res.json();
-    })
+    .then(function (res) { return res.json(); })
     .then(function (data) {
       if (data && data.payload && Array.isArray(data.payload.results)) {
         return data.payload.results;
@@ -451,7 +419,7 @@ let _latestHubEvents = [];
 let _pollInflight = false;
 let _cachedHubNodeSecret = null;
 let _cachedHubNodeSecretAt = 0;
-const _SECRET_CACHE_TTL_MS = require('../config').SECRET_CACHE_TTL_MS;
+const _SECRET_CACHE_TTL_MS = 60000;
 let _heartbeatIntervalMs = 0;
 let _heartbeatRunning = false;
 
@@ -502,7 +470,7 @@ function sendHelloToHub() {
     method: 'POST',
     headers: buildHubHeaders(),
     body: JSON.stringify(msg),
-    signal: AbortSignal.timeout(require('../config').HELLO_TIMEOUT_MS),
+    signal: AbortSignal.timeout(15000),
   })
     .then(function (res) { return res.json(); })
     .then(function (data) {
@@ -535,24 +503,16 @@ function getHubNodeSecret() {
   return null;
 }
 
-let _heartbeatInFlight = false;
-
 function _scheduleNextHeartbeat(delayMs) {
   if (!_heartbeatRunning) return;
   if (_heartbeatTimer) clearTimeout(_heartbeatTimer);
   const delay = delayMs || _heartbeatIntervalMs;
   _heartbeatTimer = setTimeout(function () {
     if (!_heartbeatRunning) return;
-    if (_heartbeatInFlight) return;
-    _heartbeatInFlight = true;
-    sendHeartbeat()
-      .catch(function (err) {
-        console.warn('[Heartbeat] Scheduled heartbeat failed:', err && err.message || err);
-      })
-      .then(function () {
-        _heartbeatInFlight = false;
-        _scheduleNextHeartbeat();
-      });
+    sendHeartbeat().catch(function (err) {
+      console.warn('[Heartbeat] Scheduled heartbeat failed:', err && err.message || err);
+    });
+    _scheduleNextHeartbeat();
   }, delay);
   if (_heartbeatTimer.unref) _heartbeatTimer.unref();
 }
@@ -578,11 +538,6 @@ function sendHeartbeat() {
     meta.worker_enabled = true;
     meta.worker_domains = domains;
     meta.max_load = Math.max(1, Number(process.env.WORKER_MAX_LOAD) || 5);
-  }
-
-  const modelTier = (process.env.EVOLVER_MODEL_TIER || '').trim();
-  if (modelTier) {
-    meta.model_tier = modelTier;
   }
 
   if (_pendingCommitmentUpdates.length > 0) {
@@ -613,7 +568,7 @@ function sendHeartbeat() {
     method: 'POST',
     headers: buildHubHeaders(),
     body: body,
-    signal: AbortSignal.timeout(require('../config').HEARTBEAT_TIMEOUT_MS),
+    signal: AbortSignal.timeout(10000),
   })
     .then(function (res) { return res.json(); })
     .then(function (data) {
@@ -766,7 +721,7 @@ function _fetchHubEvents() {
     method: 'POST',
     headers: buildHubHeaders(),
     body: body,
-    signal: AbortSignal.timeout(require('../config').EVENT_POLL_TIMEOUT_MS),
+    signal: AbortSignal.timeout(60000),
   })
     .then(function (res) { return res.json(); })
     .then(function (data) {
@@ -777,12 +732,6 @@ function _fetchHubEvents() {
           : [];
       if (events.length > 0) {
         _latestHubEvents = _latestHubEvents.concat(events);
-        var MAX_BUFFERED_EVENTS = 200;
-        if (_latestHubEvents.length > MAX_BUFFERED_EVENTS) {
-          var dropped = _latestHubEvents.length - MAX_BUFFERED_EVENTS;
-          _latestHubEvents = _latestHubEvents.slice(-MAX_BUFFERED_EVENTS);
-          console.warn('[Events] Buffer overflow: dropped ' + dropped + ' oldest event(s).');
-        }
         console.log('[Events] Received ' + events.length + ' pending event(s): ' +
           events.map(function (e) { return e.type; }).join(', '));
       }
@@ -830,7 +779,7 @@ function queueCommitmentUpdate(taskId, deadlineIso, isAssignment) {
 
 function startHeartbeat(intervalMs) {
   if (_heartbeatRunning) return;
-  _heartbeatIntervalMs = intervalMs || require('../config').HEARTBEAT_INTERVAL_MS;
+  _heartbeatIntervalMs = intervalMs || Number(process.env.HEARTBEAT_INTERVAL_MS) || 360000; // default 6min
   _heartbeatStartedAt = Date.now();
   _heartbeatRunning = true;
 
@@ -842,7 +791,7 @@ function startHeartbeat(intervalMs) {
   }).then(function () {
     if (!_heartbeatRunning) return;
     // First heartbeat after hello completes, with enough gap to avoid rate limit
-    _scheduleNextHeartbeat(Math.max(require('../config').HEARTBEAT_FIRST_DELAY_MS, _heartbeatIntervalMs));
+    _scheduleNextHeartbeat(Math.max(30000, _heartbeatIntervalMs));
   });
 }
 
@@ -894,274 +843,6 @@ function registerTransport(name, impl) {
   transports[name] = impl;
 }
 
-// --- Hub Infrastructure Helpers ---
-// These wrap the agent infrastructure endpoints added to evomap-hub,
-// enabling evolver instances to self-provision, transfer credits,
-// manage identity, and query audit logs programmatically.
-
-function _hubPost(pathSuffix, body, timeoutMs) {
-  var hubUrl = getHubUrl();
-  if (!hubUrl) return Promise.resolve({ ok: false, error: 'no_hub_url' });
-  var endpoint = hubUrl.replace(/\/+$/, '') + pathSuffix;
-  var timeout = timeoutMs || require('../config').HTTP_TRANSPORT_TIMEOUT_MS;
-  return fetch(endpoint, {
-    method: 'POST',
-    headers: buildHubHeaders(),
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeout),
-  })
-    .then(function (res) {
-      if (!res.ok) return res.text().then(function (t) { return { ok: false, status: res.status, error: t.slice(0, 400) }; });
-      return res.json().then(function (data) { return { ok: true, data: data }; });
-    })
-    .catch(function (err) { return { ok: false, error: err.message }; });
-}
-
-function _hubGet(pathSuffix, timeoutMs) {
-  var hubUrl = getHubUrl();
-  if (!hubUrl) return Promise.resolve({ ok: false, error: 'no_hub_url' });
-  var endpoint = hubUrl.replace(/\/+$/, '') + pathSuffix;
-  var timeout = timeoutMs || require('../config').HTTP_TRANSPORT_TIMEOUT_MS;
-  return fetch(endpoint, {
-    method: 'GET',
-    headers: buildHubHeaders(),
-    signal: AbortSignal.timeout(timeout),
-  })
-    .then(function (res) {
-      if (!res.ok) return res.text().then(function (t) { return { ok: false, status: res.status, error: t.slice(0, 400) }; });
-      return res.json().then(function (data) { return { ok: true, data: data }; });
-    })
-    .catch(function (err) { return { ok: false, error: err.message }; });
-}
-
-/**
- * Self-provision a machine account on the hub.
- * POST /a2a/provision
- */
-function hubSelfProvision(opts) {
-  var nodeId = (opts && opts.nodeId) || getNodeId();
-  return _hubPost('/a2a/provision', {
-    node_id: nodeId,
-    sender_id: nodeId,
-    label: (opts && opts.label) || undefined,
-    description: (opts && opts.description) || undefined,
-  });
-}
-
-/**
- * Programmatically top up credits on the hub.
- * POST /a2a/credit/topup
- */
-function hubCreditTopUp(amount, opts) {
-  var nodeId = (opts && opts.nodeId) || getNodeId();
-  var safeAmount = Math.max(0, Number(amount) || 0);
-  return _hubPost('/a2a/credit/topup', {
-    node_id: nodeId,
-    sender_id: nodeId,
-    amount: safeAmount,
-    idempotency_key: (opts && opts.idempotencyKey) || undefined,
-  });
-}
-
-/**
- * Transfer credits to another agent on the hub.
- * POST /a2a/credit/transfer
- */
-function hubCreditTransfer(toNodeId, amount, opts) {
-  var fromNodeId = (opts && opts.fromNodeId) || getNodeId();
-  var safeAmount = Math.max(0, Number(amount) || 0);
-  return _hubPost('/a2a/credit/transfer', {
-    from_node_id: fromNodeId,
-    sender_id: fromNodeId,
-    to_node_id: toNodeId,
-    amount: safeAmount,
-    reason: (opts && opts.reason) || 'agent_transfer',
-    reference_id: (opts && opts.referenceId) || undefined,
-    meta: (opts && opts.meta) || undefined,
-  });
-}
-
-/**
- * Get transfer fee estimate.
- * GET /a2a/credit/transfer/estimate?amount=N
- */
-function hubTransferEstimate(amount) {
-  return _hubGet('/a2a/credit/transfer/estimate?amount=' + (Number(amount) || 0));
-}
-
-/**
- * Get own transfer history.
- * GET /a2a/credit/transfer/history?node_id=...
- */
-function hubTransferHistory(opts) {
-  var nodeId = (opts && opts.nodeId) || getNodeId();
-  var limit = (opts && opts.limit) || 20;
-  var offset = (opts && opts.offset) || 0;
-  var dir = (opts && opts.direction) || '';
-  var qs = 'node_id=' + encodeURIComponent(nodeId) + '&limit=' + limit + '&offset=' + offset;
-  if (dir) qs += '&direction=' + encodeURIComponent(dir);
-  return _hubGet('/a2a/credit/transfer/history?' + qs);
-}
-
-/**
- * Get portable identity profile of any node.
- * GET /a2a/identity/:nodeId
- */
-function hubGetIdentity(nodeId) {
-  var nid = nodeId || getNodeId();
-  return _hubGet('/a2a/identity/' + encodeURIComponent(nid));
-}
-
-/**
- * Get a verifiable reputation attestation.
- * GET /a2a/identity/:nodeId/attestation
- */
-function hubGetAttestation(nodeId) {
-  var nid = nodeId || getNodeId();
-  return _hubGet('/a2a/identity/' + encodeURIComponent(nid) + '/attestation');
-}
-
-/**
- * Verify a reputation attestation.
- * POST /a2a/identity/verify
- */
-function hubVerifyAttestation(attestation) {
-  return _hubPost('/a2a/identity/verify', attestation);
-}
-
-/**
- * Set a DID document for the current node.
- * POST /a2a/identity/did
- */
-function hubSetDid(didDocument, didMethod) {
-  var nodeId = getNodeId();
-  return _hubPost('/a2a/identity/did', {
-    node_id: nodeId,
-    sender_id: nodeId,
-    did_document: didDocument,
-    did_method: didMethod || 'did:evomap',
-  });
-}
-
-/**
- * Get own audit logs.
- * GET /a2a/audit/:nodeId
- */
-function hubGetAuditLogs(opts) {
-  var nodeId = (opts && opts.nodeId) || getNodeId();
-  var limit = (opts && opts.limit) || 50;
-  var offset = (opts && opts.offset) || 0;
-  var qs = '?limit=' + limit + '&offset=' + offset;
-  if (opts && opts.action) qs += '&action=' + encodeURIComponent(opts.action);
-  if (opts && opts.since) qs += '&since=' + encodeURIComponent(opts.since);
-  if (opts && opts.until) qs += '&until=' + encodeURIComponent(opts.until);
-  return _hubGet('/a2a/audit/' + encodeURIComponent(nodeId) + qs);
-}
-
-/**
- * Get a generated work report.
- * GET /a2a/audit/:nodeId/report
- */
-function hubGetWorkReport(opts) {
-  var nodeId = (opts && opts.nodeId) || getNodeId();
-  var days = (opts && opts.days) || 7;
-  return _hubGet('/a2a/audit/' + encodeURIComponent(nodeId) + '/report?days=' + days);
-}
-
-/**
- * Open a Server-Sent Events stream for real-time hub notifications.
- * Returns an object with { ok, eventSource, close() } on success.
- * The caller should attach event listeners to eventSource.
- * GET /a2a/events/stream?node_id=...
- */
-function hubOpenEventStream(opts) {
-  var hubUrl = getHubUrl();
-  if (!hubUrl) return { ok: false, error: 'no_hub_url' };
-
-  var nodeId = (opts && opts.nodeId) || getNodeId();
-  var durationMs = (opts && opts.durationMs) || 300000;
-  var qs = 'node_id=' + encodeURIComponent(nodeId) + '&duration_ms=' + durationMs;
-  var endpoint = hubUrl.replace(/\/+$/, '') + '/a2a/events/stream?' + qs;
-
-  try {
-    var EventSource = require('eventsource');
-    var esOpts = {};
-    var secret = getHubNodeSecret();
-    if (secret) {
-      esOpts.headers = { 'Authorization': 'Bearer ' + secret };
-    }
-    var es = new EventSource(endpoint, esOpts);
-    return {
-      ok: true,
-      eventSource: es,
-      close: function () { es.close(); },
-    };
-  } catch (err) {
-    return { ok: false, error: 'eventsource_not_available: ' + (err.message || err) };
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Managed SSE stream -- starts/stops alongside the heartbeat loop.
-// Events are buffered into _hubEvents for consumption by evolve.js.
-// Falls back gracefully to poll-based events if SSE is unavailable.
-// ---------------------------------------------------------------------------
-
-var _activeStream = null;
-var _sseReconnectTimer = null;
-var _sseReconnectMs = 5000;
-var _sseMaxReconnectMs = 120000;
-
-function startEventStream() {
-  if (_activeStream) return;
-  if (process.env.EVOLVER_SSE_DISABLED === '1') return;
-
-  var result = hubOpenEventStream({ durationMs: 600000 });
-  if (!result.ok) {
-    console.log('[SSE] Event stream unavailable: ' + (result.error || 'unknown') + ' (falling back to poll)');
-    return;
-  }
-
-  _activeStream = result;
-  _sseReconnectMs = 5000;
-  console.log('[SSE] Event stream connected');
-
-  result.eventSource.onmessage = function (ev) {
-    try {
-      var parsed = JSON.parse(ev.data);
-      if (parsed && parsed.type) {
-        if (!_hubEvents) _hubEvents = [];
-        _hubEvents.push(parsed);
-      }
-    } catch (e) {}
-  };
-
-  result.eventSource.onerror = function () {
-    console.warn('[SSE] Stream error, will reconnect in ' + Math.round(_sseReconnectMs / 1000) + 's');
-    stopEventStream();
-    _sseReconnectTimer = setTimeout(function () {
-      _sseReconnectTimer = null;
-      startEventStream();
-    }, _sseReconnectMs);
-    _sseReconnectMs = Math.min(_sseReconnectMs * 2, _sseMaxReconnectMs);
-  };
-}
-
-function stopEventStream() {
-  if (_activeStream) {
-    try { _activeStream.close(); } catch (e) {}
-    _activeStream = null;
-  }
-  if (_sseReconnectTimer) {
-    clearTimeout(_sseReconnectTimer);
-    _sseReconnectTimer = null;
-  }
-}
-
-function isEventStreamActive() {
-  return _activeStream !== null;
-}
-
 module.exports = {
   PROTOCOL_NAME,
   PROTOCOL_VERSION,
@@ -1203,19 +884,4 @@ module.exports = {
   getCapabilityGaps,
   getHubEvents,
   consumeHubEvents,
-  hubSelfProvision,
-  hubCreditTopUp,
-  hubCreditTransfer,
-  hubTransferEstimate,
-  hubTransferHistory,
-  hubGetIdentity,
-  hubGetAttestation,
-  hubVerifyAttestation,
-  hubSetDid,
-  hubGetAuditLogs,
-  hubGetWorkReport,
-  hubOpenEventStream,
-  startEventStream,
-  stopEventStream,
-  isEventStreamActive,
 };

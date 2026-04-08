@@ -7,6 +7,22 @@ try { require('dotenv').config({ path: path.join(getRepoRoot(), '.env') }); } ca
 const fs = require('fs');
 const { spawn } = require('child_process');
 
+// Issue #295: Prevent silent process exit on Node.js v22
+let _unhandledRejectionCount = 0;
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught exception: ' + (err.stack || err.message || err));
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  _unhandledRejectionCount++;
+  console.warn('[WARN] Unhandled rejection # ' + _unhandledRejectionCount + ': ' + (reason instanceof Error ? reason.stack : reason));
+  if (_unhandledRejectionCount >= 5) {
+    console.error('[FATAL] Too many unhandled rejections (' + _unhandledRejectionCount + '), exiting to prevent corrupt state');
+    process.exit(1);
+  }
+});
+
+
 function sleepMs(ms) {
   const n = parseInt(String(ms), 10);
   const t = Number.isFinite(n) ? Math.max(0, n) : 0;
@@ -69,22 +85,18 @@ function parseMs(v, fallback) {
 function acquireLock() {
   const lockFile = path.join(__dirname, 'evolver.pid');
   try {
-    try {
-      fs.writeFileSync(lockFile, String(process.pid), { flag: 'wx' });
-      return true;
-    } catch (exclErr) {
-      if (exclErr.code !== 'EEXIST') throw exclErr;
-    }
-    const pid = parseInt(fs.readFileSync(lockFile, 'utf8').trim(), 10);
-    if (!Number.isFinite(pid) || pid <= 0) {
-      console.log('[Singleton] Corrupt lock file (invalid PID). Taking over.');
-    } else {
-      try {
-        process.kill(pid, 0);
-        console.log(`[Singleton] Evolver loop already running (PID ${pid}). Exiting.`);
-        return false;
-      } catch (e) {
-        console.log(`[Singleton] Stale lock found (PID ${pid}). Taking over.`);
+    if (fs.existsSync(lockFile)) {
+      const pid = parseInt(fs.readFileSync(lockFile, 'utf8').trim(), 10);
+      if (!Number.isFinite(pid) || pid <= 0) {
+        console.log('[Singleton] Corrupt lock file (invalid PID). Taking over.');
+      } else {
+        try {
+          process.kill(pid, 0);
+          console.log(`[Singleton] Evolver loop already running (PID ${pid}). Exiting.`);
+          return false;
+        } catch (e) {
+          console.log(`[Singleton] Stale lock found (PID ${pid}). Taking over.`);
+        }
       }
     }
     fs.writeFileSync(lockFile, String(process.pid));
@@ -129,27 +141,9 @@ async function main() {
     if (isLoop) {
         // Internal daemon loop (no wrapper required).
         if (!acquireLock()) process.exit(0);
-        process.on('exit', () => {
-          releaseLock();
-          try { require('./src/gep/a2aProtocol').stopEventStream(); } catch (e) {}
-        });
-        process.on('SIGINT', () => { releaseLock(); try { require('./src/gep/a2aProtocol').stopEventStream(); } catch (e) {} process.exit(); });
-        process.on('SIGTERM', () => { releaseLock(); try { require('./src/gep/a2aProtocol').stopEventStream(); } catch (e) {} process.exit(); });
-        process.on('uncaughtException', (err) => {
-          console.error('[FATAL] Uncaught exception:', err && err.stack ? err.stack : String(err));
-          releaseLock();
-          process.exit(1);
-        });
-        let _unhandledRejectionCount = 0;
-        process.on('unhandledRejection', (reason) => {
-          _unhandledRejectionCount++;
-          console.error('[FATAL] Unhandled promise rejection (' + _unhandledRejectionCount + '):', reason && reason.stack ? reason.stack : String(reason));
-          if (_unhandledRejectionCount >= 5) {
-            console.error('[FATAL] Too many unhandled rejections (' + _unhandledRejectionCount + '). Exiting to avoid corrupt state.');
-            releaseLock();
-            process.exit(1);
-          }
-        });
+        process.on('exit', releaseLock);
+        process.on('SIGINT', () => { releaseLock(); process.exit(); });
+        process.on('SIGTERM', () => { releaseLock(); process.exit(); });
 
         process.env.EVOLVE_LOOP = 'true';
         if (!process.env.EVOLVE_BRIDGE) {
@@ -176,9 +170,8 @@ async function main() {
 
         // Start hub heartbeat (keeps node alive independently of evolution cycles)
         try {
-          const { startHeartbeat, startEventStream } = require('./src/gep/a2aProtocol');
+          const { startHeartbeat } = require('./src/gep/a2aProtocol');
           startHeartbeat();
-          startEventStream();
         } catch (e) {
           console.warn('[Heartbeat] Failed to start: ' + (e.message || e));
         }
@@ -277,11 +270,11 @@ async function main() {
             const st1 = readJsonSafe(solidifyStatePath);
             const lastSignals = st1 && st1.last_run && Array.isArray(st1.last_run.signals) ? st1.last_run.signals : [];
             if (lastSignals.includes('force_steady_state')) {
-              saturationMultiplier = 4;
-              console.log('[Daemon] Saturation detected. Entering steady-state mode (4x sleep).');
+              saturationMultiplier = 10;
+              console.log('[Daemon] Saturation detected. Entering steady-state mode (10x sleep).');
             } else if (lastSignals.includes('evolution_saturation')) {
-              saturationMultiplier = 2;
-              console.log('[Daemon] Approaching saturation. Reducing evolution frequency (2x sleep).');
+              saturationMultiplier = 5;
+              console.log('[Daemon] Approaching saturation. Reducing evolution frequency (5x sleep).');
             }
           } catch (e) {}
 
@@ -740,10 +733,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch(function (err) {
-    console.error('[FATAL] Top-level error:', err && err.stack ? err.stack : String(err));
-    process.exitCode = 1;
-  });
+  main();
 }
 
 module.exports = {

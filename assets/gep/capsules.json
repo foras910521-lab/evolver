@@ -12,7 +12,7 @@
         "windows_shell_incompatible",
         "perf_bottleneck"
       ],
-      "gene": "gene_gep_repair_from_errors",
+      "gene": "sha256:909ee46e5e28fdec176b4a5cdf89612b0df13ffbff036f2f8833264461aa5b33",
       "summary": "固化：gene_gep_repair_from_errors 命中信号 log_error, errsig:**TOOLRESULT**: { \"status\": \"error\", \"tool\": \"exec\", \"error\": \"error: unknown command 'process'\\n\\nCommand exited with code 1\" }, user_missing, windows_shell_incompatible, perf_bottleneck，变更 1 文件 / 2 行。",
       "confidence": 0.85,
       "blast_radius": {
@@ -36,7 +36,16 @@
       "a2a": {
         "eligible_to_broadcast": false
       },
-      "asset_id": "sha256:3eed0cd5038f9e85fbe0d093890e291e9b8725644c766e6cce40bf62d0f5a2e8"
+      "asset_id": "sha256:3eed0cd5038f9e85fbe0d093890e291e9b8725644c766e6cce40bf62d0f5a2e8",
+      "content": "Intent: 修复 exec 工具未知命令错误\n\nStrategy:\n1. 提取日志中的结构化错误信号\n2. 通过信号匹配选择 gene_gep_repair_from_errors\n3. 生成最小化可逆补丁\n4. 验证并固化知识\n\nScope: 1 file(s), 2 line(s) changed\n\nChanged files: 待修复文件\n\nOutcome score: 0.85",
+      "strategy": [
+        "Extract structured signals from logs and user instructions",
+        "Select an existing Gene by signals match (no improvisation)",
+        "Estimate blast radius (files, lines) before editing",
+        "Apply smallest reversible patch",
+        "Validate using declared validation steps; rollback on failure",
+        "Solidify knowledge: append EvolutionEvent, update Gene/Capsule store"
+      ]
     },
     {
       "type": "Capsule",
@@ -49,7 +58,7 @@
         "windows_shell_incompatible",
         "perf_bottleneck"
       ],
-      "gene": "gene_gep_repair_from_errors",
+      "gene": "sha256:909ee46e5e28fdec176b4a5cdf89612b0df13ffbff036f2f8833264461aa5b33",
       "summary": "固化：gene_gep_repair_from_errors 命中信号 log_error, errsig:**TOOLRESULT**: { \"status\": \"error\", \"tool\": \"exec\", \"error\": \"error: unknown command 'process'\\n\\nCommand exited with code 1\" }, user_missing, windows_shell_incompatible, perf_bottleneck，变更 2 文件 / 44 行。",
       "confidence": 0.85,
       "blast_radius": {
@@ -73,7 +82,16 @@
       "a2a": {
         "eligible_to_broadcast": false
       },
-      "asset_id": "sha256:20d971a3c4cb2b75f9c045376d1aa003361c12a6b89a4b47b7e81dbd4f4d8fe8"
+      "asset_id": "sha256:20d971a3c4cb2b75f9c045376d1aa003361c12a6b89a4b47b7e81dbd4f4d8fe8",
+      "content": "Intent: 修复 exec 工具未知命令错误\n\nStrategy:\n1. 提取日志中的结构化错误信号\n2. 通过信号匹配选择 gene_gep_repair_from_errors\n3. 生成最小化可逆补丁\n4. 验证并固化知识\n\nScope: 2 file(s), 44 line(s) changed\n\nChanged files: 待修复文件\n\nOutcome score: 0.85",
+      "strategy": [
+        "Extract structured signals from logs and user instructions",
+        "Select an existing Gene by signals match (no improvisation)",
+        "Estimate blast radius (files, lines) before editing",
+        "Apply smallest reversible patch",
+        "Validate using declared validation steps; rollback on failure",
+        "Solidify knowledge: append EvolutionEvent, update Gene/Capsule store"
+      ]
     },
     {
       "type": "Capsule",
@@ -95,7 +113,86 @@
         "score": 0.9
       },
       "success_streak": 1,
-      "asset_id": "sha256:4a2f205213e3c019f7c8e99faf4cfdd65f900f0e8771684002207ee01e96cfa7"
+      "asset_id": "sha256:4a2f205213e3c019f7c8e99faf4cfdd65f900f0e8771684002207ee01e96cfa7",
+      "content": "Intent: 优化 evolver 运行效率，包括 memory_graph.jsonl 尾部读取、fileTransportReceive 边界检查、sleepSync 跨平台兼容性、acquireLock 原子性、health_check 缓存\n\nStrategy:\n1. 优化 memory_graph.jsonl tail read（只读最后 512KB）\n2. 添加 fileTransportReceive bounded read（最大 50 文件/256KB）\n3. sleepSync cross-platform busy-wait fallback\n4. acquireLock O_EXCL 原子性\n5. health_check /proc cache（60 秒缓存）\n\nScope: 0 file(s), 0 line(s) changed（配置/逻辑优化）\n\nOutcome score: 0.9",
+      "strategy": [
+        "Optimize memory_graph tail read with bounded seek",
+        "Add fileTransportReceive bounds to prevent memory exhaustion",
+        "Implement cross-platform sleepSync with busy-wait fallback",
+        "Use O_EXCL for atomic lock acquisition",
+        "Cache health_check /proc results for 60 seconds"
+      ]
+    },
+    {
+      "type": "Capsule",
+      "schema_version": "1.6.0",
+      "id": "capsule_distilled_exec_repair",
+      "trigger": [
+        "bounty_task",
+        "external_task",
+        "agent的成本效益评估：如何量化其运行成本并进行优化？",
+        "operational costs",
+        "token consumption",
+        "resource optimization",
+        "API costs",
+        "LLM costs",
+        "cost-efficiency",
+        "log_error",
+        "errsig:shutdown error: Invalid config...",
+        "user_feature_request",
+        "user_feature_request:- 根因：`appendCandidateJsonl()` 纯追加，从不检查 ID 是否存在",
+        "perf_bottleneck",
+        "high_tool_usage:exec",
+        "repeated_tool_usage:exec",
+        "retry_error_context",
+        "retry_cmd:node scripts/validate-suite.js",
+        "retry_stderr:FAIL: test suite exited with code 1\n missing commands\n    ok 6 - returns false for missing commands\n      ---\n      dura"
+      ],
+      "gene": "sha256:a974677f7d2b6f2897131b2659aa7c627cdc6f48c03c67cc024b6a12fecf500f",
+      "summary": "固化：gene_gep_innovate_from_opportunity 命中信号 bounty_task, external_task, agent的成本效益评估：如何量化其运行成本并进行优化？, operational costs, token consumption, resource optimization, API costs, LLM costs, cost-efficiency, log_error, errsig:shutdown error: Invalid config..., user_feature_request, user_feature_request:- 根因：`appendCandidateJsonl()` 纯追加，从不检查 ID 是否存在, perf_bottleneck, high_tool_usage:exec, repeated_tool_usage:exec, retry_error_context, retry_cmd:node scripts/validate-suite.js, retry_stderr:FAIL: test suite exited with code 1\n missing commands\n    ok 6 - returns false for missing commands\n      ---\n      dura，变更 0 文件 / 0 行。",
+      "confidence": 0.88,
+      "blast_radius": {
+        "files": 0,
+        "lines": 0
+      },
+      "outcome": {
+        "status": "success",
+        "score": 0.88
+      },
+      "success_streak": 1,
+      "success_reason": "Gene gene_gep_innovate_from_opportunity (innovate) matched signals [bounty_task, external_task, agent的成本效益评估：如何量化其运行成本并进行优化？, operational costs]. Scope: 0 file(s), 0 line(s) changed. Outcome score: 0.88. Strategy applied: Extract opportunity signals and identify the specific user need or system gap; Search existing Genes and Capsules for partial matches (avoid reinventing); Design a minimal, testable implementation plan (prefer small increments).",
+      "gene_library_version": "glib_3ba3d1a3480c472e",
+      "env_fingerprint": {
+        "device_id": "7b5881f98c6b4f8884ba517fe007f029",
+        "node_version": "v22.22.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "os_release": "25.3.0",
+        "hostname": "057d35dd6939",
+        "evolver_version": "1.47.0",
+        "client": "@evomap/evolver",
+        "client_version": "1.47.0",
+        "cwd": "9f5fb216dcb6",
+        "container": false,
+        "captured_at": "2026-04-08T12:33:27.191Z"
+      },
+      "source_type": "reference",
+      "reused_asset_id": "sha256:e51305b50d757cd0e81eef5eab3acdb89db21b9d583b2636879c7878cec113a4",
+      "a2a": {
+        "eligible_to_broadcast": false
+      },
+      "content": "Gene: gene_gep_innovate_from_opportunity (innovate)\n\nSignals: bounty_task, external_task, agent的成本效益评估：如何量化其运行成本并进行优化？, operational costs, token consumption, resource optimization, API costs, LLM costs\n\nStrategy:\n1. Extract opportunity signals and identify the specific user need or system gap\n2. Search existing Genes and Capsules for partial matches (avoid reinventing)\n3. Design a minimal, testable implementation plan (prefer small increments)\n4. Estimate blast radius; innovate changes may touch more files but must stay within constraints\n5. Implement the change with clear validation criteria\n6. Validate using declared validation steps; rollback on failure\n7. Solidify: record EvolutionEvent with intent=innovate, create new Gene if pattern is novel, create Capsule on success\n\nScope: 0 file(s), 0 line(s)\n\nOutcome score: 0.88",
+      "diff": "diff --git a/assets/gep/events.jsonl b/assets/gep/events.jsonl\nindex ec31e3e..cde51b1 100644\n--- a/assets/gep/events.jsonl\n+++ b/assets/gep/events.jsonl\n@@ -5,3 +5,5 @@\n {\"type\":\"EvolutionEvent\",\"schema_version\":\"1.5.0\",\"id\":\"evt_1770477654236\",\"parent\":\"evt_1770477201173\",\"intent\":\"repair\",\"signals\":[\"log_error\",\"errsig:**TOOLRESULT**: { \\\"status\\\": \\\"error\\\", \\\"tool\\\": \\\"exec\\\", \\\"error\\\": \\\"error: unknown command 'process'\\\\n\\\\nCommand exited with code 1\\\" }\",\"user_missing\",\"windows_shell_incompatible\",\"perf_bottleneck\"],\"genes_used\":[\"gene_gep_repair_from_errors\"],\"mutation_id\":\"mut_1770477615603\",\"personality_state\":{\"type\":\"PersonalityState\",\"rigor\":0.7,\"creativity\":0.35,\"verbosity\":0.25,\"risk_tolerance\":0.4,\"obedience\":0.9},\"blast_radius\":{\"files\":1,\"lines\":2},\"outcome\":{\"status\":\"success\",\"score\":0.85},\"capsule_id\":\"capsule_1770477654236\",\"env_fingerprint\":{\"node_version\":\"v22.22.0\",\"platform\":\"linux\",\"arch\":\"x64\",\"os_release\":\"6.1.0-42-cloud-amd64\",\"evolver_version\":\"1.7.0\",\"cwd\":\"/home/crishaocredits/.openclaw/workspace\",\"captured_at\":\"2026-02-07T15:20:54.155Z\"},\"validation_report_id\":\"vr_1770477654235\",\"meta\":{\"at\":\"2026-02-07T15:20:54.236Z\",\"signal_key\":\"errsig_norm:870c3a82|log_error|perf_bottleneck|user_missing|windows_shell_incompatible\",\"selector\":{\"selected\":\"gene_gep_repair_from_errors\",\"reason\":[\"signals match gene.signals_match\",\"signals: log_error, errsig:**TOOLRESULT**: { \\\"status\\\": \\\"error\\\", \\\"tool\\\": \\\"exec\\\", \\\"error\\\": \\\"error: unknown command 'process'\\\\n\\\\nCommand exited with code 1\\\" }, user_missing, windows_shell_incompatible, perf_bottleneck\",\"memory_graph: memory_prefer:gene_gep_repair_from_errors | gene_prior:0.500\"],\"alternatives\":[\"gene_gep_innovate_from_opportunity\"]},\"blast_radius_estimate\":{\"files\":12,\"lines\":960},\"mutation\":{\"type\":\"Mutation\",\"id\":\"mut_1770477615603\",\"category\":\"repair\",\"trigger_signals\":[\"log_error\",\"errsig:**TOOLRESULT**: { \\\"status\\\": \\\"error\\\", \\\"tool\\\": \\\"exec\\\", \\\"error\\\": \\\"error: unknown command 'process'\\\\n\\\\nCommand exited with code 1\\\" }\",\"user_missing\",\"windows_shell_incompatible\",\"perf_bottleneck\"],\"target\":\"gene:gene_gep_repair_from_errors\",\"expected_effect\":\"reduce runtime errors, increase stability, and lower failure rate\",\"risk_level\":\"low\"},\"personality\":{\"key\":\"rigor=0.7|creativity=0.3|verbosity=0.3|risk_tolerance=0.4|obedience=0.9\",\"known\":true,\"mutations\":[]},\"gene\":{\"id\":\"gene_gep_repair_from_errors\",\"created\":false,\"reason\":\"selected_gene_id_present\"},\"constraints_ok\":true,\"constraint_violations\":[],\"validation_ok\":true,\"validation\":[{\"cmd\":\"node -e \\\"require('./src/evolve'); require('./src/gep/solidify'); console.log('ok')\\\"\",\"ok\":true},{\"cmd\":\"node -e \\\"require('./src/gep/selector'); require('./src/gep/memoryGraph'); console.log('ok')\\\"\",\"ok\":true}],\"validation_report\":{\"type\":\"ValidationReport\",\"schema_version\":\"1.5.0\",\"id\":\"vr_1770477654235\",\"gene_id\":\"gene_gep_repair_from_errors\",\"env_fingerprint\":{\"node_version\":\"v22.22.0\",\"platform\":\"linux\",\"arch\":\"x64\",\"os_release\":\"6.1.0-42-cloud-amd64\",\"evolver_version\":\"1.7.0\",\"cwd\":\"/home/crishaocredits/.openclaw/workspace\",\"captured_at\":\"2026-02-07T15:20:54.155Z\"},\"env_fingerprint_key\":\"b98472b2ef785976\",\"commands\":[{\"command\":\"node -e \\\"require('./src/evolve'); require('./src/gep/solidify'); console.log('ok')\\\"\",\"ok\":true,\"stdout\":\"ok\\n\",\"stderr\":\"\"},{\"command\":\"node -e \\\"require('./src/gep/selector'); require('./src/gep/memoryGraph'); console.log('ok')\\\"\",\"ok\":true,\"stdout\":\"ok\\n\",\"stderr\":\"\"}],\"overall_ok\":true,\"duration_ms\":80,\"created_at\":\"2026-02-07T15:20:54.236Z\",\"asset_id\":\"sha256:404345b559ec9a29d30444c3d66ff8f346d87017b7dea1d965ae35f029c8d5c6\"},\"protocol_ok\":true,\"protocol_violations\":[],\"memory_graph\":\"/home/crishaocredits/.openclaw/workspace/skills/evolver/memory/memory_graph.jsonl\"},\"asset_id\":\"sha256:a795229043cb18c18f108eed7e9c26b95b48119fb143877d57ea004dade5799f\"}\n {\"type\":\"ValidationReport\",\"schema_version\":\"1.5.0\",\"id\":\"vr_1770478341768\",\"gene_id\":\"gene_gep_repair_from_errors\",\"env_fingerprint\":{\"node_version\":\"v22.22.0\",\"platform\":\"linux\",\"arch\":\"x64\",\"os_release\":\"6.1.0-42-cloud-amd64\",\"evolver_version\":\"1.7.0\",\"cwd\":\"/home/crishaocredits/.openclaw/workspace\",\"captured_at\":\"2026-02-07T15:32:21.678Z\"},\"env_fingerprint_key\":\"b98472b2ef785976\",\"commands\":[{\"command\":\"node -e \\\"require('./src/evolve'); require('./src/gep/solidify'); console.log('ok')\\\"\",\"ok\":true,\"stdout\":\"ok\\n\",\"stderr\":\"\"},{\"command\":\"node -e \\\"require('./src/gep/selector'); require('./src/gep/memoryGraph'); console.log('ok')\\\"\",\"ok\":true,\"stdout\":\"ok\\n\",\"stderr\":\"\"}],\"overall_ok\":true,\"duration_ms\":90,\"created_at\":\"2026-02-07T15:32:21.769Z\",\"asset_id\":\"sha256:442c9ac0e27706330719fbdc049b92ab78aea643e31a079c5c93fb174c27edb0\"}\n {\"type\":\"EvolutionEvent\",\"schema_version\":\"1.5.0\",\"id\":\"evt_1770478341769\",\"parent\":\"evt_1770477201173\",\"intent\":\"repair\",\"signals\":[\"log_error\",\"errsig:**TOOLRESULT**: { \\\"status\\\": \\\"error\\\", \\\"tool\\\": \\\"exec\\\", \\\"error\\\": \\\"error: unknown command 'process'\\\\n\\\\nCommand exited with code 1\\\" }\",\"user_missing\",\"windows_shell_incompatible\",\"perf_bottleneck\"],\"genes_used\":[\"gene_gep_repair_from_errors\"],\"mutation_id\":\"mut_1770477615603\",\"personality_state\":{\"type\":\"PersonalityState\",\"rigor\":0.7,\"creativity\":0.35,\"verbosity\":0.25,\"risk_tolerance\":0.4,\"obedience\":0.9},\"blast_radius\":{\"files\":2,\"lines\":44},\"outcome\":{\"status\":\"success\",\"score\":0.85},\"capsule_id\":\"capsule_1770478341769\",\"env_fingerprint\":{\"node_version\":\"v22.22.0\",\"platform\":\"linux\",\"arch\":\"x64\",\"os_release\":\"6.1.0-42-cloud-amd64\",\"evolver_version\":\"1.7.0\",\"cwd\":\"/home/crishaocredits/.openclaw/workspace\",\"captured_at\":\"2026-02-07T15:32:21.678Z\"},\"validation_report_id\":\"vr_1770478341768\",\"meta\":{\"at\":\"2026-02-07T15:32:21.769Z\",\"signal_key\":\"errsig_norm:870c3a82|log_error|perf_bottleneck|user_missing|windows_shell_incompatible\",\"selector\":{\"selected\":\"gene_gep_repair_from_errors\",\"reason\":[\"signals match gene.signals_match\",\"signals: log_error, errsig:**TOOLRESULT**: { \\\"status\\\": \\\"error\\\", \\\"tool\\\": \\\"exec\\\", \\\"error\\\": \\\"error: unknown command 'process'\\\\n\\\\nCommand exited with code 1\\\" }, user_missing, windows_shell_incompatible, perf_bottleneck\",\"memory_graph: memory_prefer:gene_gep_repair_from_errors | gene_prior:0.500\"],\"alternatives\":[\"gene_gep_innovate_from_opportunity\"]},\"blast_radius_estimate\":{\"files\":12,\"lines\":960},\"mutation\":{\"type\":\"Mutation\",\"id\":\"mut_1770477615603\",\"category\":\"repair\",\"trigger_signals\":[\"log_error\",\"errsig:**TOOLRESULT**: { \\\"status\\\": \\\"error\\\", \\\"tool\\\": \\\"exec\\\", \\\"error\\\": \\\"error: unknown command 'process'\\\\n\\\\nCommand exited with code 1\\\" }\",\"user_missing\",\"windows_shell_incompatible\",\"perf_bottleneck\"],\"target\":\"gene:gene_gep_repair_from_errors\",\"expected_effect\":\"reduce runtime errors, increase stability, and lower failure rate\",\"risk_level\":\"low\"},\"personality\":{\"key\":\"rigor=0.7|creativity=0.3|verbosity=0.3|risk_tolerance=0.4|obedience=0.9\",\"known\":true,\"mutations\":[]},\"gene\":{\"id\":\"gene_gep_repair_from_errors\",\"created\":false,\"reason\":\"selected_gene_id_present\"},\"constraints_ok\":true,\"constraint_violations\":[],\"validation_ok\":true,\"validation\":[{\"cmd\":\"node -e \\\"require('./src/evolve'); require('./src/gep/solidify'); console.log('ok')\\\"\",\"ok\":true},{\"cmd\":\"node -e \\\"require('./src/gep/selector'); require('./src/gep/memoryGraph'); console.log('ok')\\\"\",\"ok\":true}],\"validation_report\":{\"type\":\"ValidationReport\",\"schema_version\":\"1.5.0\",\"id\":\"vr_1770478341768\",\"gene_id\":\"gene_gep_repair_from_errors\",\"env_fingerprint\":{\"node_version\":\"v22.22.0\",\"platform\":\"linux\",\"arch\":\"x64\",\"os_release\":\"6.1.0-42-cloud-amd64\",\"evolver_version\":\"1.7.0\",\"cwd\":\"/home/crishaocredits/.openclaw/workspace\",\"captured_at\":\"2026-02-07T15:32:21.678Z\"},\"env_fingerprint_key\":\"b98472b2ef785976\",\"commands\":[{\"command\":\"node -e \\\"require('./src/evolve'); require('./src/gep/solidify'); console.log('ok')\\\"\",\"ok\":true,\"stdout\":\"ok\\n\",\"stderr\":\"\"},{\"command\":\"node -e \\\"require('./src/gep/selector'); require('./src/gep/memoryGraph'); console.log('ok')\\\"\n... [TRUNCATED]",
+      "strategy": [
+        "Extract opportunity signals and identify the specific user need or system gap",
+        "Search existing Genes and Capsules for partial matches (avoid reinventing)",
+        "Design a minimal, testable implementation plan (prefer small increments)",
+        "Estimate blast radius; innovate changes may touch more files but must stay within constraints",
+        "Implement the change with clear validation criteria",
+        "Validate using declared validation steps; rollback on failure",
+        "Solidify: record EvolutionEvent with intent=innovate, create new Gene if pattern is novel, create Capsule on success"
+      ],
+      "asset_id": "sha256:d6a7f30fcda4164f32452c3caebcc16969a60648e8c80b06b13ba27ad517bf2d"
     }
   ]
 }

@@ -32,7 +32,10 @@
       "validation": [
         "node scripts/validate-modules.js ./src/evolve ./src/gep/solidify ./src/gep/policyCheck ./src/gep/selector ./src/gep/memoryGraph ./src/gep/assetStore",
         "node scripts/validate-suite.js"
-      ]
+      ],
+      "schema_version": "1.5.0",
+      "summary": "修复错误导向的能力修复基因，通过错误日志信号匹配并生成最小可逆补丁",
+      "asset_id": "sha256:909ee46e5e28fdec176b4a5cdf89612b0df13ffbff036f2f8833264461aa5b33"
     },
     {
       "type": "Gene",
@@ -66,7 +69,10 @@
       "validation": [
         "node scripts/validate-modules.js ./src/evolve ./src/gep/prompt ./src/gep/contentHash ./src/gep/skillDistiller",
         "node scripts/validate-suite.js"
-      ]
+      ],
+      "schema_version": "1.5.0",
+      "summary": "优化提示词和资产结构，提升GEP协议输出的可审计性和可复用性",
+      "asset_id": "sha256:34f1f8c493adab39772987d4828194b87c58357252e106fd761bc374f01f50b1"
     },
     {
       "type": "Gene",
@@ -103,8 +109,153 @@
       "validation": [
         "node scripts/validate-modules.js ./src/evolve ./src/gep/solidify ./src/gep/policyCheck ./src/gep/mutation ./src/gep/personality",
         "node scripts/validate-suite.js"
-      ]
+      ],
+      "learning_history": [
+        {
+          "at": "2026-04-08T12:32:19.953Z",
+          "outcome": "failed",
+          "mode": "soft",
+          "reason_class": "validation",
+          "retryable": true,
+          "learning_signals": [
+            "problem:reliability",
+            "action:repair",
+            "problem:performance",
+            "action:optimize",
+            "problem:capability",
+            "action:innovate",
+            "area:orchestration",
+            "risk:validation"
+          ]
+        },
+        {
+          "at": "2026-04-08T12:33:41.835Z",
+          "outcome": "success",
+          "mode": "none",
+          "reason_class": "unknown",
+          "retryable": false,
+          "learning_signals": [
+            "bounty_task",
+            "external_task",
+            "agent的成本效益评估：如何量化其运行成本并进行优化？",
+            "operational costs",
+            "token consumption",
+            "resource optimization",
+            "API costs",
+            "LLM costs",
+            "cost-efficiency",
+            "log_error",
+            "errsig:shutdown error: Invalid config...",
+            "user_feature_request"
+          ]
+        }
+      ],
+      "anti_patterns": [
+        {
+          "at": "2026-04-08T12:32:19.953Z",
+          "mode": "soft",
+          "reason_class": "validation",
+          "learning_signals": [
+            "problem:reliability",
+            "action:repair",
+            "problem:performance",
+            "action:optimize",
+            "problem:capability",
+            "action:innovate",
+            "area:orchestration",
+            "risk:validation"
+          ]
+        }
+      ],
+      "epigenetic_marks": [
+        {
+          "context": "darwin/arm64/v22.22.0",
+          "boost": -0.05,
+          "reason": "reinforced_by_success",
+          "created_at": "2026-04-08T12:33:41.835Z"
+        }
+      ],
+      "schema_version": "1.6.0",
+      "asset_id": "sha256:a974677f7d2b6f2897131b2659aa7c627cdc6f48c03c67cc024b6a12fecf500f",
+      "summary": "从机会信号驱动的创新基因，探索新能力组合以突破局部最优"
+    },
+    {
+      "type": "Gene",
+      "schema_version": "1.6.0",
+      "id": "gene_auto_9fbe58de",
+      "category": "innovate",
+      "signals_match": [
+        "high_tool_usage:exec",
+        "repeated_tool_usage:exec",
+        "force_innovation_after_repair_loop"
+      ],
+      "preconditions": [
+        "signals_key == force_innovation_after_repair_loop|high_tool_usage:exec|repeated_tool_usage:exec"
+      ],
+      "strategy": [
+        "Extract structured signals from logs and user instructions",
+        "Select an existing Gene by signals match (no improvisation)",
+        "Estimate blast radius (files, lines) before editing and record it",
+        "Apply smallest reversible patch",
+        "Validate using declared validation steps; rollback on failure",
+        "Solidify knowledge: append EvolutionEvent, update Gene/Capsule store"
+      ],
+      "constraints": {
+        "max_files": 12,
+        "forbidden_paths": [
+          ".git",
+          "node_modules",
+          "skills/feishu-evolver-wrapper",
+          "skills/feishu-common",
+          "skills/feishu-post",
+          "skills/feishu-card",
+          "skills/feishu-doc",
+          "skills/skill-tools",
+          "skills/clawhub",
+          "skills/clawhub-batch-undelete",
+          "skills/git-sync"
+        ]
+      },
+      "validation": [
+        "node scripts/validate-modules.js ./src/gep/solidify ./src/gep/policyCheck ./src/gep/assetStore",
+        "node scripts/validate-suite.js"
+      ],
+      "epigenetic_marks": [
+        {
+          "context": "darwin/arm64/v22.22.0",
+          "boost": -0.1,
+          "reason": "failure_in_environment",
+          "created_at": "2026-04-08T12:38:11.412Z"
+        }
+      ],
+      "asset_id": "sha256:0e999984757d50e533d38c14157d27dbf4e9614e684ca1642dfe74f09769306b",
+      "learning_history": [
+        {
+          "at": "2026-04-08T12:38:11.412Z",
+          "outcome": "failed",
+          "mode": "soft",
+          "reason_class": "validation",
+          "retryable": true,
+          "learning_signals": [
+            "problem:reliability",
+            "action:repair",
+            "risk:validation"
+          ]
+        }
+      ],
+      "anti_patterns": [
+        {
+          "at": "2026-04-08T12:38:11.412Z",
+          "mode": "soft",
+          "reason_class": "validation",
+          "learning_signals": [
+            "problem:reliability",
+            "action:repair",
+            "risk:validation"
+          ]
+        }
+      ],
+      "summary": "自动化生成的本地优化基因"
     }
   ]
 }
-

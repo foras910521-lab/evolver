@@ -10,7 +10,7 @@ const { getRepoRoot, getWorkspaceRoot, getEvolverLogPath } = require('../gep/pat
 var WORKSPACE_ROOT = getWorkspaceRoot();
 var LOG_FILE = getEvolverLogPath();
 var PID_FILE = path.join(WORKSPACE_ROOT, 'memory', 'evolver_loop.pid');
-var MAX_SILENCE_MS = require('../config').MAX_SILENCE_MS;
+var MAX_SILENCE_MS = 30 * 60 * 1000;
 
 function getLoopScript() {
     // Prefer wrapper if exists, fallback to core evolver
@@ -50,13 +50,7 @@ function isPidRunning(pid) {
 }
 
 function getCmdLine(pid) {
-    try {
-        const safePid = parseInt(pid, 10);
-        if (isNaN(safePid)) return null;
-        return execSync(`ps -p ${safePid} -o args=`, { encoding: 'utf8' }).trim();
-    } catch (e) {
-        return null;
-    }
+    try { return execSync('ps -p ' + pid + ' -o args=', { encoding: 'utf8' }).trim(); } catch (e) { return null; }
 }
 
 // --- Lifecycle ---
@@ -68,10 +62,7 @@ function start(options) {
         console.log('[Lifecycle] Already running (PIDs: ' + pids.join(', ') + ').');
         return { status: 'already_running', pids: pids };
     }
-    if (delayMs > 0) {
-        const safeDelay = parseFloat(delayMs / 1000) || 0;
-        execSync(`sleep ${safeDelay}`);
-    }
+    if (delayMs > 0) execSync('sleep ' + (delayMs / 1000));
 
     var script = getLoopScript();
     console.log('[Lifecycle] Starting: node ' + path.relative(WORKSPACE_ROOT, script) + ' --loop');
@@ -138,11 +129,7 @@ function status() {
 function tailLog(lines) {
     if (!fs.existsSync(LOG_FILE)) return { error: 'No log file' };
     try {
-        const n = parseInt(lines, 10) || 20;
-        return {
-            file: path.relative(WORKSPACE_ROOT, LOG_FILE),
-            content: execSync(`tail -n ${n} "${LOG_FILE}"`, { encoding: 'utf8' })
-        };
+        return { file: path.relative(WORKSPACE_ROOT, LOG_FILE), content: execSync('tail -n ' + (lines || 20) + ' "' + LOG_FILE + '"', { encoding: 'utf8' }) };
     } catch (e) {
         return { error: e.message };
     }

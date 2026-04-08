@@ -116,23 +116,7 @@ function tryReadMemoryGraphEvents(limitLines = 2000) {
   try {
     const p = memoryGraphPath();
     if (!fs.existsSync(p)) return [];
-    const stat = fs.statSync(p);
-    const TAIL_BYTES = 512 * 1024;
-    let raw;
-    if (stat.size <= TAIL_BYTES) {
-      raw = fs.readFileSync(p, 'utf8');
-    } else {
-      const fd = fs.openSync(p, 'r');
-      try {
-        const buf = Buffer.alloc(TAIL_BYTES);
-        fs.readSync(fd, buf, 0, TAIL_BYTES, stat.size - TAIL_BYTES);
-        raw = buf.toString('utf8');
-        const firstNewline = raw.indexOf('\n');
-        if (firstNewline >= 0) raw = raw.slice(firstNewline + 1);
-      } finally {
-        fs.closeSync(fd);
-      }
-    }
+    const raw = fs.readFileSync(p, 'utf8');
     const lines = raw
       .split('\n')
       .map(l => l.trim())

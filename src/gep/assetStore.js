@@ -195,7 +195,24 @@ function appendEventJsonl(eventObj) {
 
 function appendCandidateJsonl(candidateObj) {
   const dir = getGepAssetsDir(); ensureDir(dir);
-  fs.appendFileSync(candidatesPath(), JSON.stringify(candidateObj) + '\n', 'utf8');
+  const p = candidatesPath();
+  const id = candidateObj && candidateObj.id;
+  ensureDir(dir);
+  if (id && fs.existsSync(p)) {
+    // Deduplicate: remove any existing entry with the same ID before appending.
+    const lines = fs.readFileSync(p, 'utf8').split('\n').map(l => l.trim()).filter(Boolean);
+    const unique = [];
+    for (const line of lines) {
+      try {
+        const entry = JSON.parse(line);
+        if (entry.id !== id) unique.push(line);
+      } catch { /* skip malformed lines */ }
+    }
+    unique.push(JSON.stringify(candidateObj));
+    fs.writeFileSync(p, unique.join('\n') + '\n', 'utf8');
+  } else {
+    fs.appendFileSync(p, JSON.stringify(candidateObj) + '\n', 'utf8');
+  }
 }
 
 function appendExternalCandidateJsonl(obj) {

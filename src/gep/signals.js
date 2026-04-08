@@ -169,7 +169,12 @@ function extractSignals({ recentSessionTranscript, todayLog, memorySnippet, user
 
     if (errLine) {
       var clipped = errLine.replace(/\s+/g, ' ').slice(0, 260);
-      signals.push('errsig:' + clipped);
+      // Filter out non-critical OpenClaw UI errors (Issue #305 workaround)
+      if (clipped.includes('@buape/carbon') || clipped.includes('buape')) {
+        console.warn('[SignalFilter] Skipping @buape/carbon errsig (non-critical OpenClaw UI error): ' + clipped.slice(0, 80));
+      } else {
+        signals.push('errsig:' + clipped);
+      }
     }
   } catch (e) {}
 

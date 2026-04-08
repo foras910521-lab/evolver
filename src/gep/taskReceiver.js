@@ -39,7 +39,7 @@ async function fetchTasks(opts) {
 
   try {
     const payload = {
-      tasks_only: true,
+      asset_type: null,
       include_tasks: true,
     };
 
@@ -513,42 +513,6 @@ async function claimAndCompleteWorkerTask(taskId, resultAssetId) {
   return { ok: true, assignment_id: assignmentId };
 }
 
-// ---------------------------------------------------------------------------
-// PRIVACY_PARAMS detection -- checks if a task body contains a sealed
-// computing block and extracts tool/blob references for the evolution loop.
-// ---------------------------------------------------------------------------
-
-/**
- * Check if a task requires privacy/sealed computing.
- * @param {object} task
- * @returns {{ toolId: string, blobIds: string[] } | null}
- */
-function detectPrivacyTask(task) {
-  if (!task) return null;
-  const body = task.body || task.description || '';
-  try {
-    const { parsePrivacyParams } = require('./privacyClient');
-    return parsePrivacyParams(body);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Augment taskToSignals output with privacy-specific signals when applicable.
- * @param {object} task
- * @returns {string[]}
- */
-function taskToSignalsWithPrivacy(task) {
-  const signals = taskToSignals(task);
-  const pp = detectPrivacyTask(task);
-  if (pp) {
-    if (!signals.includes('privacy_computing')) signals.push('privacy_computing');
-    if (!signals.includes('sealed_tool')) signals.push('sealed_tool');
-  }
-  return signals;
-}
-
 module.exports = {
   fetchTasks,
   selectBestTask,
@@ -557,8 +521,6 @@ module.exports = {
   claimTask,
   completeTask,
   taskToSignals,
-  taskToSignalsWithPrivacy,
-  detectPrivacyTask,
   claimWorkerTask,
   completeWorkerTask,
   claimAndCompleteWorkerTask,
